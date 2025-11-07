@@ -1,0 +1,40 @@
+service: terrapin-events
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_ACCOUNT_ID: ${aws:accountId}
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.tableName}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.tableName}/index/*"
+
+custom:
+  tableName: ${self:service}-${self:provider.stage}
+  eventBusName: ${self:service}-${self:provider.stage}
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline
+
+package:
+  individually: true
