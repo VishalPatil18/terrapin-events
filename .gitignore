@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+.serverless/
+
+# Environment files
+.env
+.env*.local
+.env.production
+
+# AWS
+.aws-sam/
+cdk.out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+.serverless/
+
+# Testing
+coverage/
+.nyc_output/
