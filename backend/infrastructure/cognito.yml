@@ -1,0 +1,179 @@
+service: terrapin-events-cognito
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+
+resources:
+  Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${self:provider.stage}
+        
+        # Username & Sign-in Configuration
+        UsernameAttributes:
+          - email
+        UsernameConfiguration:
+          CaseSensitive: false
+          
+        # Password Policy
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 12
+            RequireUppercase: true
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: true
+            TemporaryPasswordValidityDays: 7
+            
+        # MFA Configuration
+        MfaConfiguration: OPTIONAL
+        EnabledMfas:
+          - SOFTWARE_TOKEN_MFA
+          
+        # Email Configuration
+        EmailConfiguration:
+          EmailSendingAccount: COGNITO_DEFAULT
+          
+        # Auto-verification
+        AutoVerifiedAttributes:
+          - email
+          
+        # Schema
+        Schema:
+          - Name: email
+            AttributeDataType: String
+            Required: true
+            Mutable: false
+          - Name: given_name
+            AttributeDataType: String
+            Required: true
+            Mutable: true
+          - Name: family_name
+            AttributeDataType: String
+            Required: true
+            Mutable: true
+          - Name: role
+            AttributeDataType: String
+            Mutable: true
+            
+        # Account Recovery
+        AccountRecoverySetting:
+          RecoveryMechanisms:
+            - Name: verified_email
+              Priority: 1
+              
+        # User Pool Add-ons
+        UserPoolAddOns:
+          AdvancedSecurityMode: ENFORCED
+          
+        # Device Configuration
+        DeviceConfiguration:
+          ChallengeRequiredOnNewDevice: true
+          DeviceOnlyRememberedOnUserPrompt: true
+          
+        UserPoolTags:
+          Project: TEMS
+          Environment: ${self:provider.stage}
+          ManagedBy: Serverless
+            
+    # User Pool Domain
+    CognitoUserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        Domain: tems-${self:provider.stage}-${aws:accountId}
+        UserPoolId: !Ref CognitoUserPool
+        
+    # Web App Client
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-web-client-${self:provider.stage}
+        UserPoolId: !Ref CognitoUserPool
+        GenerateSecret: false
+        
+        # OAuth Configuration
+        AllowedOAuthFlows:
+          - code
+          - implicit
+        AllowedOAuthScopes:
+          - email
+          - openid
+          - profile
+        AllowedOAuthFlowsUserPoolClient: true
+        CallbackURLs:
+          - http://localhost:3000/auth/callback
+          - https://dev.events.umd.edu/auth/callback
+        LogoutURLs:
+          - http://localhost:3000
+          - https://dev.events.umd.edu
+          
+        # Token Configuration
+        AccessTokenValidity: 1
+        IdTokenValidity: 1
+        RefreshTokenValidity: 30
+        TokenValidityUnits:
+          AccessToken: hours
+          IdToken: hours
+          RefreshToken: days
+          
+        # Attribute Read/Write Permissions
+        ReadAttributes:
+          - email
+          - email_verified
+          - given_name
+          - family_name
+          - name
+          - custom:role
+          
+        # Security
+        PreventUserExistenceErrors: ENABLED
+        
+    # User Groups
+    ParticipantGroup:
+      Type: AWS::Cognito::UserPoolGroup
+      Properties:
+        GroupName: Participants
+        Description: Regular event participants
+        UserPoolId: !Ref CognitoUserPool
+        Precedence: 3
+        
+    OrganizerGroup:
+      Type: AWS::Cognito::UserPoolGroup
+      Properties:
+        GroupName: Organizers
+        Description: Event organizers
+        UserPoolId: !Ref CognitoUserPool
+        Precedence: 2
+        
+    AdministratorGroup:
+      Type: AWS::Cognito::UserPoolGroup
+      Properties:
+        GroupName: Administrators
+        Description: System administrators
+        UserPoolId: !Ref CognitoUserPool
+        Precedence: 1
+        
+  Outputs:
+    UserPoolId:
+      Value: !Ref CognitoUserPool
+      Export:
+        Name: ${self:provider.stage}-CognitoUserPoolId
+    UserPoolArn:
+      Value: !GetAtt CognitoUserPool.Arn
+      Export:
+        Name: ${self:provider.stage}-CognitoUserPoolArn
+    UserPoolClientId:
+      Value: !Ref CognitoUserPoolClient
+      Export:
+        Name: ${self:provider.stage}-CognitoUserPoolClientId
+    UserPoolDomain:
+      Value: !Ref CognitoUserPoolDomain
+      Export:
+        Name: ${self:provider.stage}-CognitoUserPoolDomain

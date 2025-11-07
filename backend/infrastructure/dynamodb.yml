@@ -1,0 +1,92 @@
+service: terrapin-events-dynamodb
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+
+resources:
+  Resources:
+    TemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        
+        # Single-table design key schema
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: GSI1PK
+            AttributeType: S
+          - AttributeName: GSI1SK
+            AttributeType: S
+          - AttributeName: GSI2PK
+            AttributeType: S
+          - AttributeName: GSI2SK
+            AttributeType: S
+            
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+            
+        GlobalSecondaryIndexes:
+          # GSI1: For querying by category and date
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: GSI1PK
+                KeyType: HASH
+              - AttributeName: GSI1SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+              
+          # GSI2: For user-specific queries
+          - IndexName: GSI2
+            KeySchema:
+              - AttributeName: GSI2PK
+                KeyType: HASH
+              - AttributeName: GSI2SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+              
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+          
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+          
+        SSESpecification:
+          SSEEnabled: true
+          SSEType: KMS
+          
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+          - Key: ManagedBy
+            Value: Serverless
+            
+  Outputs:
+    TableName:
+      Value: !Ref TemsTable
+      Export:
+        Name: ${self:provider.stage}-TemsTableName
+    TableArn:
+      Value: !GetAtt TemsTable.Arn
+      Export:
+        Name: ${self:provider.stage}-TemsTableArn
+    TableStreamArn:
+      Value: !GetAtt TemsTable.StreamArn
+      Export:
+        Name: ${self:provider.stage}-TemsTableStreamArn
