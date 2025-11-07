@@ -109,10 +109,10 @@ resources:
         AllowedOAuthFlowsUserPoolClient: true
         CallbackURLs:
           - http://localhost:3000/auth/callback
-          - https://dev.events.umd.edu/auth/callback
+          - https://tems.shantanu-gonade.com/auth/callback
         LogoutURLs:
           - http://localhost:3000
-          - https://dev.events.umd.edu
+          - https://tems.shantanu-gonade.com
           
         # Token Configuration
         AccessTokenValidity: 1

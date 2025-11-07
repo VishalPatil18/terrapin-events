@@ -1,0 +1,58 @@
+service: terrapin-events-eventbridge
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+
+resources:
+  Resources:
+    # Custom Event Bus
+    TemsEventBus:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: ${self:service}-${self:provider.stage}
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+            
+    # Archive for event replay
+    EventArchive:
+      Type: AWS::Events::Archive
+      Properties:
+        ArchiveName: ${self:service}-archive-${self:provider.stage}
+        SourceArn: !GetAtt TemsEventBus.Arn
+        RetentionDays: 30
+        Description: Archive for TEMS events
+        
+    # Dead Letter Queue for failed events
+    EventsDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-dlq-${self:provider.stage}
+        MessageRetentionPeriod: 1209600  # 14 days
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+            
+  Outputs:
+    EventBusName:
+      Value: !Ref TemsEventBus
+      Export:
+        Name: ${self:provider.stage}-EventBusName
+    EventBusArn:
+      Value: !GetAtt TemsEventBus.Arn
+      Export:
+        Name: ${self:provider.stage}-EventBusArn
+    EventsDLQUrl:
+      Value: !Ref EventsDLQ
+      Export:
+        Name: ${self:provider.stage}-EventsDLQUrl

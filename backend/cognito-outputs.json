@@ -1,0 +1,27 @@
+[
+    {
+        "OutputKey": "UserPoolClientId",
+        "OutputValue": "6vp1egaccqetres45q5572lpah",
+        "ExportName": "dev-CognitoUserPoolClientId"
+    },
+    {
+        "OutputKey": "UserPoolDomain",
+        "OutputValue": "tems-dev-430118815985",
+        "ExportName": "dev-CognitoUserPoolDomain"
+    },
+    {
+        "OutputKey": "UserPoolId",
+        "OutputValue": "us-east-1_H5mbENw7a",
+        "ExportName": "dev-CognitoUserPoolId"
+    },
+    {
+        "OutputKey": "UserPoolArn",
+        "OutputValue": "arn:aws:cognito-idp:us-east-1:430118815985:userpool/us-east-1_H5mbENw7a",
+        "ExportName": "dev-CognitoUserPoolArn"
+    },
+    {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-016059b0-79aa",
+        "ExportName": "sls-terrapin-events-cognito-dev-ServerlessDeploymentBucketName"
+    }
+]

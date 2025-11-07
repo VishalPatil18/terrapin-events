@@ -1,0 +1,150 @@
+service: terrapin-events-s3
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+
+resources:
+  Resources:
+    # Main assets bucket
+    AssetsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-assets-${self:provider.stage}
+        
+        # Encryption
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+                
+        # Versioning
+        VersioningConfiguration:
+          Status: Enabled
+          
+        # Lifecycle rules
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteOldVersions
+              Status: Enabled
+              NoncurrentVersionExpirationInDays: 30
+            - Id: TransitionToIA
+              Status: Enabled
+              Transitions:
+                - TransitionInDays: 30
+                  StorageClass: STANDARD_IA
+                  
+        # CORS Configuration
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+              AllowedOrigins:
+                - http://localhost:3000
+                - https://tems.shantanu-gonade.com
+              MaxAge: 3000
+              
+        # Public Access Block
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+          
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+            
+    # CloudFront Origin Access Identity
+    CloudFrontOAI:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: OAI for TEMS ${self:provider.stage}
+          
+    # Bucket Policy for CloudFront
+    AssetsBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref AssetsBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+              Action: s3:GetObject
+              Resource: !Sub "${AssetsBucket.Arn}/*"
+              
+    # CloudFront Distribution
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          Comment: TEMS Assets CDN ${self:provider.stage}
+          
+          Origins:
+            - Id: S3Origin
+              DomainName: !GetAtt AssetsBucket.RegionalDomainName
+              S3OriginConfig:
+                OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+                
+          DefaultCacheBehavior:
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            MinTTL: 0
+            DefaultTTL: 86400
+            MaxTTL: 31536000
+            
+          PriceClass: PriceClass_100
+          
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+            
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+            
+  Outputs:
+    AssetsBucketName:
+      Value: !Ref AssetsBucket
+      Export:
+        Name: ${self:provider.stage}-AssetsBucketName
+    AssetsBucketArn:
+      Value: !GetAtt AssetsBucket.Arn
+      Export:
+        Name: ${self:provider.stage}-AssetsBucketArn
+    CloudFrontDistributionId:
+      Value: !Ref CloudFrontDistribution
+      Export:
+        Name: ${self:provider.stage}-CloudFrontDistributionId
+    CloudFrontDomainName:
+      Value: !GetAtt CloudFrontDistribution.DomainName
+      Export:
+        Name: ${self:provider.stage}-CloudFrontDomainName
