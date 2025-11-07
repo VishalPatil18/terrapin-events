@@ -1,0 +1,58 @@
+service: tems-graphql-resolver
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+  
+  environment:
+    TABLE_NAME: terrapin-events-dynamodb-${self:provider.stage}
+    STAGE: ${self:provider.stage}
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource:
+            - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+            - Fn::Join:
+                - ''
+                - - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                  - '/index/*'
+
+# Use Serverless Framework's built-in TypeScript support
+build:
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    target: node20
+    exclude:
+      - '@aws-sdk/*'
+
+functions:
+  graphqlResolver:
+    handler: handler.handler
+    layers:
+      - ${cf:tems-common-layer-${self:provider.stage}.CommonLambdaLayerQualifiedArn}
+
+resources:
+  Outputs:
+    GraphQLResolverLambdaArn:
+      Value: !GetAtt GraphqlResolverLambdaFunction.Arn
+      Export:
+        Name: ${self:provider.stage}-GraphQLResolverLambdaArn
+
+package:
+  individually: true

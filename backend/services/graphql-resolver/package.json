@@ -1,0 +1,18 @@
+{
+  "name": "tems-graphql-resolver",
+  "version": "1.0.0",
+  "description": "GraphQL resolver Lambda function for TEMS",
+  "main": "handler.ts",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {}
+}

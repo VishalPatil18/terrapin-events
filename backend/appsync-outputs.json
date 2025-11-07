@@ -1,0 +1,22 @@
+[
+    {
+        "OutputKey": "GraphQLApiId",
+        "OutputValue": "2mefjzixuvbhjjkjc6ho5kdufm",
+        "ExportName": "dev-GraphQLApiId"
+    },
+    {
+        "OutputKey": "GraphQLApiUrl",
+        "OutputValue": "https://ndppvngvirfkrcux4hwb57e5p4.appsync-api.us-east-1.amazonaws.com/graphql",
+        "ExportName": "dev-GraphQLApiUrl"
+    },
+    {
+        "OutputKey": "GraphQLApiKey",
+        "OutputValue": "da2-lqz56tjcijbvfn7x5aluxnz72y",
+        "ExportName": "dev-GraphQLApiKey"
+    },
+    {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-016059b0-79aa",
+        "ExportName": "sls-terrapin-events-appsync-dev-ServerlessDeploymentBucketName"
+    }
+]

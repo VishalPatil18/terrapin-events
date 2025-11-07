@@ -1,0 +1,201 @@
+# Event Type
+type Event {
+  id: ID!
+  title: String!
+  description: String!
+  startDateTime: AWSDateTime!
+  endDateTime: AWSDateTime!
+  location: Location!
+  category: EventCategory!
+  capacity: Int!
+  registeredCount: Int!
+  waitlistCount: Int!
+  organizerId: ID!
+  organizer: User!
+  status: EventStatus!
+  tags: [String!]
+  imageUrl: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+# User Type
+type User {
+  id: ID!
+  email: AWSEmail!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+# Registration Type
+type Registration {
+  id: ID!
+  userId: ID!
+  eventId: ID!
+  status: RegistrationStatus!
+  qrCode: String!
+  waitlistPosition: Int
+  registeredAt: AWSDateTime!
+  attendedAt: AWSDateTime
+}
+
+# Location Type
+type Location {
+  name: String!
+  building: String!
+  room: String
+  address: String!
+  coordinates: Coordinates
+}
+
+type Coordinates {
+  latitude: Float!
+  longitude: Float!
+}
+
+# Enums
+enum EventCategory {
+  ACADEMIC
+  SOCIAL
+  SPORTS
+  ARTS
+  TECH
+  CAREER
+  OTHER
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum UserRole {
+  PARTICIPANT
+  ORGANIZER
+  ADMINISTRATOR
+  SUPER_ADMIN
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLISTED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
+}
+
+# Queries
+type Query {
+  # Events
+  getEvent(id: ID!): Event
+  listEvents(
+    filter: EventFilter
+    limit: Int
+    nextToken: String
+  ): EventConnection!
+  searchEvents(query: String!): [Event!]!
+  
+  # Users
+  getUser(id: ID!): User
+  getCurrentUser: User!
+  
+  # Registrations
+  getRegistration(id: ID!): Registration
+  listMyRegistrations: [Registration!]!
+}
+
+# Mutations
+type Mutation {
+  # Events
+  createEvent(input: CreateEventInput!): Event!
+  updateEvent(id: ID!, input: UpdateEventInput!): Event!
+  deleteEvent(id: ID!): Event!
+  publishEvent(id: ID!): Event!
+  
+  # Registrations
+  registerForEvent(eventId: ID!): Registration!
+  cancelRegistration(id: ID!): Registration!
+  checkInAttendee(registrationId: ID!): Registration!
+  
+  # Users
+  updateUserProfile(input: UpdateUserInput!): User!
+}
+
+# Subscriptions
+type Subscription {
+  onEventUpdate(eventId: ID!): Event
+    @aws_subscribe(mutations: ["updateEvent", "publishEvent"])
+  
+  onNewRegistration(eventId: ID!): Registration
+    @aws_subscribe(mutations: ["registerForEvent"])
+}
+
+# Input Types
+input CreateEventInput {
+  title: String!
+  description: String!
+  startDateTime: AWSDateTime!
+  endDateTime: AWSDateTime!
+  location: LocationInput!
+  category: EventCategory!
+  capacity: Int!
+  tags: [String!]
+  imageUrl: String
+}
+
+input UpdateEventInput {
+  title: String
+  description: String
+  startDateTime: AWSDateTime
+  endDateTime: AWSDateTime
+  location: LocationInput
+  category: EventCategory
+  capacity: Int
+  tags: [String!]
+  imageUrl: String
+  status: EventStatus
+}
+
+input LocationInput {
+  name: String!
+  building: String!
+  room: String
+  address: String!
+  coordinates: CoordinatesInput
+}
+
+input CoordinatesInput {
+  latitude: Float!
+  longitude: Float!
+}
+
+input UpdateUserInput {
+  firstName: String
+  lastName: String
+}
+
+input EventFilter {
+  category: EventCategory
+  status: EventStatus
+  startDateAfter: AWSDateTime
+  startDateBefore: AWSDateTime
+}
+
+# Connection Types
+type EventConnection {
+  items: [Event!]!
+  nextToken: String
+}
+
+# Schema
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}

@@ -1,0 +1,375 @@
+service: terrapin-events-appsync
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+
+resources:
+  Resources:
+    # AppSync GraphQL API
+    GraphQLApi:
+      Type: AWS::AppSync::GraphQLApi
+      Properties:
+        Name: ${self:service}-${self:provider.stage}
+        AuthenticationType: AMAZON_COGNITO_USER_POOLS
+        UserPoolConfig:
+          AwsRegion: ${self:provider.region}
+          DefaultAction: ALLOW
+          UserPoolId:
+            Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolId
+        AdditionalAuthenticationProviders:
+          - AuthenticationType: API_KEY
+        LogConfig:
+          CloudWatchLogsRoleArn: !GetAtt AppSyncLogsRole.Arn
+          FieldLogLevel: ERROR
+        XrayEnabled: true
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+    # API Key (for development/testing)
+    GraphQLApiKey:
+      Type: AWS::AppSync::ApiKey
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Description: API Key for ${self:service}-${self:provider.stage}
+        Expires: 1767225600  # Jan 1, 2026
+
+    # GraphQL Schema (Embedded)
+    GraphQLSchema:
+      Type: AWS::AppSync::GraphQLSchema
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Definition: |
+          # Event Type
+          type Event {
+            id: ID!
+            title: String!
+            description: String!
+            startDateTime: AWSDateTime!
+            endDateTime: AWSDateTime!
+            location: Location!
+            category: EventCategory!
+            capacity: Int!
+            registeredCount: Int!
+            waitlistCount: Int!
+            organizerId: ID!
+            organizer: User!
+            status: EventStatus!
+            tags: [String!]
+            imageUrl: String
+            createdAt: AWSDateTime!
+            updatedAt: AWSDateTime!
+          }
+
+          # User Type
+          type User {
+            id: ID!
+            email: AWSEmail!
+            firstName: String!
+            lastName: String!
+            role: UserRole!
+            createdAt: AWSDateTime!
+            updatedAt: AWSDateTime!
+          }
+
+          # Registration Type
+          type Registration {
+            id: ID!
+            userId: ID!
+            eventId: ID!
+            status: RegistrationStatus!
+            qrCode: String!
+            waitlistPosition: Int
+            registeredAt: AWSDateTime!
+            attendedAt: AWSDateTime
+          }
+
+          # Location Type
+          type Location {
+            name: String!
+            building: String!
+            room: String
+            address: String!
+            coordinates: Coordinates
+          }
+
+          type Coordinates {
+            latitude: Float!
+            longitude: Float!
+          }
+
+          # Enums
+          enum EventCategory {
+            ACADEMIC
+            SOCIAL
+            SPORTS
+            ARTS
+            TECH
+            CAREER
+            OTHER
+          }
+
+          enum EventStatus {
+            DRAFT
+            PENDING_APPROVAL
+            PUBLISHED
+            CANCELLED
+            COMPLETED
+          }
+
+          enum UserRole {
+            PARTICIPANT
+            ORGANIZER
+            ADMINISTRATOR
+            SUPER_ADMIN
+          }
+
+          enum RegistrationStatus {
+            REGISTERED
+            WAITLISTED
+            ATTENDED
+            NO_SHOW
+            CANCELLED
+          }
+
+          # Queries
+          type Query {
+            getEvent(id: ID!): Event
+            listEvents(filter: EventFilter, limit: Int, nextToken: String): EventConnection!
+            searchEvents(query: String!): [Event!]!
+            getUser(id: ID!): User
+            getCurrentUser: User!
+            getRegistration(id: ID!): Registration
+            listMyRegistrations: [Registration!]!
+          }
+
+          # Mutations
+          type Mutation {
+            createEvent(input: CreateEventInput!): Event!
+            updateEvent(id: ID!, input: UpdateEventInput!): Event!
+            deleteEvent(id: ID!): Event!
+            publishEvent(id: ID!): Event!
+            registerForEvent(eventId: ID!): Registration!
+            cancelRegistration(id: ID!): Registration!
+            checkInAttendee(registrationId: ID!): Registration!
+            updateUserProfile(input: UpdateUserInput!): User!
+          }
+
+          # Subscriptions
+          type Subscription {
+            onEventUpdate(eventId: ID!): Event @aws_subscribe(mutations: ["updateEvent", "publishEvent"])
+            onNewRegistration(eventId: ID!): Registration @aws_subscribe(mutations: ["registerForEvent"])
+          }
+
+          # Input Types
+          input CreateEventInput {
+            title: String!
+            description: String!
+            startDateTime: AWSDateTime!
+            endDateTime: AWSDateTime!
+            location: LocationInput!
+            category: EventCategory!
+            capacity: Int!
+            tags: [String!]
+            imageUrl: String
+          }
+
+          input UpdateEventInput {
+            title: String
+            description: String
+            startDateTime: AWSDateTime
+            endDateTime: AWSDateTime
+            location: LocationInput
+            category: EventCategory
+            capacity: Int
+            tags: [String!]
+            imageUrl: String
+            status: EventStatus
+          }
+
+          input LocationInput {
+            name: String!
+            building: String!
+            room: String
+            address: String!
+            coordinates: CoordinatesInput
+          }
+
+          input CoordinatesInput {
+            latitude: Float!
+            longitude: Float!
+          }
+
+          input UpdateUserInput {
+            firstName: String
+            lastName: String
+          }
+
+          input EventFilter {
+            category: EventCategory
+            status: EventStatus
+            startDateAfter: AWSDateTime
+            startDateBefore: AWSDateTime
+          }
+
+          # Connection Types
+          type EventConnection {
+            items: [Event!]!
+            nextToken: String
+          }
+
+          schema {
+            query: Query
+            mutation: Mutation
+            subscription: Subscription
+          }
+
+    # DynamoDB Data Source
+    DynamoDBDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Name: DynamoDBDataSource
+        Description: DynamoDB Data Source
+        Type: AMAZON_DYNAMODB
+        ServiceRoleArn: !GetAtt AppSyncDynamoDBRole.Arn
+        DynamoDBConfig:
+          AwsRegion: ${self:provider.region}
+          TableName:
+            Fn::ImportValue: ${self:provider.stage}-TemsTableName
+
+    # CloudWatch Logs Role for AppSync
+    AppSyncLogsRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSAppSyncPushToCloudWatchLogs
+
+    # DynamoDB Access Role for AppSync
+    AppSyncDynamoDBRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: AppSyncDynamoDBPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:Query
+                    - dynamodb:Scan
+                    - dynamodb:BatchGetItem
+                    - dynamodb:BatchWriteItem
+                  Resource:
+                    - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                    - Fn::Join:
+                        - ''
+                        - - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                          - '/index/*'
+
+    # Sample Resolver: getEvent
+    GetEventResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Query
+        FieldName: getEvent
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("EVENT#$ctx.args.id"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+    # Sample Resolver: listEvents
+    ListEventsResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Query
+        FieldName: listEvents
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Scan",
+            "limit": $util.defaultIfNull($ctx.args.limit, 20),
+            "nextToken": $util.toJson($util.defaultIfNullOrBlank($ctx.args.nextToken, null)),
+            "filter": {
+              "expression": "begins_with(PK, :pk)",
+              "expressionValues": {
+                ":pk": $util.dynamodb.toDynamoDBJson("EVENT#")
+              }
+            }
+          }
+        ResponseMappingTemplate: |
+          {
+            "items": $util.toJson($ctx.result.items),
+            "nextToken": $util.toJson($util.defaultIfNullOrBlank($ctx.result.nextToken, null))
+          }
+
+    # Sample Resolver: getCurrentUser
+    GetCurrentUserResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Query
+        FieldName: getCurrentUser
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.identity.sub"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+  Outputs:
+    GraphQLApiId:
+      Value: !GetAtt GraphQLApi.ApiId
+      Export:
+        Name: ${self:provider.stage}-GraphQLApiId
+    GraphQLApiUrl:
+      Value: !GetAtt GraphQLApi.GraphQLUrl
+      Export:
+        Name: ${self:provider.stage}-GraphQLApiUrl
+    GraphQLApiKey:
+      Value: !GetAtt GraphQLApiKey.ApiKey
+      Export:
+        Name: ${self:provider.stage}-GraphQLApiKey
