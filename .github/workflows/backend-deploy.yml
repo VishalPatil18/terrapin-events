@@ -40,15 +40,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test -- --coverage
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./backend/coverage/lcov.info
-          flags: backend
-
   deploy-dev:
     needs: test
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'

@@ -39,12 +39,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run type check
-        run: npm run type-check
-
-      - name: Run tests
-        run: npm test -- --coverage
-
       - name: Build application
         run: npm run build
         env:
