@@ -20,29 +20,7 @@ env:
   NODE_VERSION: '24.x'
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
   deploy-dev:
-    needs: test
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: development
     defaults:
@@ -60,6 +38,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -67,11 +48,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Serverless Framework
-        run: npm install -g serverless@4
+      - name: Install and Authenticate Serverless Framework
+        uses: serverless/github-action@v3
+        with:
+          sls-cli-version: '4.x' # Target Serverless v4
+          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
 
       - name: Deploy infrastructure
         run: |
