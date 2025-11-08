@@ -1,24 +1,35 @@
-import { AppSyncResolverHandler } from 'aws-lambda';
+import { AppSyncResolverHandler, AppSyncResolverEvent, AppSyncIdentityCognito } from 'aws-lambda';
 import { db } from '../../shared/utils/dynamodb';
 import { logger } from '../../shared/utils/logger';
 
-interface AppSyncEvent {
-  info: {
-    fieldName: string;
-    parentTypeName: string;
-  };
-  arguments: any;
-  identity: any;
+// Define the arguments types for different operations
+interface CreateEventArgs {
+  input: any;
 }
 
-export const handler: AppSyncResolverHandler<AppSyncEvent, any> = async (event) => {
+interface UpdateEventArgs {
+  id: string;
+  input: any;
+}
+
+interface RegisterArgs {
+  eventId: string;
+}
+
+interface SearchArgs {
+  query: string;
+}
+
+type ResolverArgs = CreateEventArgs | UpdateEventArgs | RegisterArgs | SearchArgs | Record<string, never>;
+
+export const handler: AppSyncResolverHandler<ResolverArgs, any> = async (event) => {
   logger.info('GraphQL Resolver invoked', {
     fieldName: event.info.fieldName,
     parentTypeName: event.info.parentTypeName,
   });
 
   const { fieldName } = event.info;
-  const { arguments: args } = event;
+  const args = event.arguments;
 
   try {
     switch (fieldName) {
@@ -26,16 +37,20 @@ export const handler: AppSyncResolverHandler<AppSyncEvent, any> = async (event) 
         return getCurrentUser(event);
       
       case 'createEvent':
-        return createEvent(args.input, event);
+        return createEvent((args as CreateEventArgs).input, event);
       
       case 'updateEvent':
-        return updateEvent(args.id, args.input, event);
+        return updateEvent(
+          (args as UpdateEventArgs).id, 
+          (args as UpdateEventArgs).input, 
+          event
+        );
       
       case 'registerForEvent':
-        return registerForEvent(args.eventId, event);
+        return registerForEvent((args as RegisterArgs).eventId, event);
       
       case 'searchEvents':
-        return searchEvents(args.query);
+        return searchEvents((args as SearchArgs).query);
       
       default:
         throw new Error(`Unknown field: ${fieldName}`);
@@ -46,8 +61,13 @@ export const handler: AppSyncResolverHandler<AppSyncEvent, any> = async (event) 
   }
 };
 
-async function getCurrentUser(event: AppSyncEvent) {
-  const userId = event.identity.sub;
+async function getCurrentUser(event: AppSyncResolverEvent<ResolverArgs>) {
+  if (!event.identity) {
+    throw new Error('Unauthorized: No identity found');
+  }
+  
+  const identity = event.identity as AppSyncIdentityCognito;
+  const userId = identity.sub;
   
   const user = await db.get(`USER#${userId}`, 'METADATA');
   
@@ -58,8 +78,13 @@ async function getCurrentUser(event: AppSyncEvent) {
   return user;
 }
 
-async function createEvent(input: any, event: AppSyncEvent) {
-  const organizerId = event.identity.sub;
+async function createEvent(input: any, event: AppSyncResolverEvent<ResolverArgs>) {
+  if (!event.identity) {
+    throw new Error('Unauthorized: No identity found');
+  }
+  
+  const identity = event.identity as AppSyncIdentityCognito;
+  const organizerId = identity.sub;
   const eventId = `evt-${Date.now()}`;
   const timestamp = new Date().toISOString();
   
@@ -86,8 +111,13 @@ async function createEvent(input: any, event: AppSyncEvent) {
   return eventData;
 }
 
-async function updateEvent(id: string, input: any, event: AppSyncEvent) {
-  const userId = event.identity.sub;
+async function updateEvent(id: string, input: any, event: AppSyncResolverEvent<ResolverArgs>) {
+  if (!event.identity) {
+    throw new Error('Unauthorized: No identity found');
+  }
+  
+  const identity = event.identity as AppSyncIdentityCognito;
+  const userId = identity.sub;
   
   // Get the existing event
   const existingEvent = await db.get(`EVENT#${id}`, 'METADATA');
@@ -120,8 +150,13 @@ async function updateEvent(id: string, input: any, event: AppSyncEvent) {
   return updatedEvent;
 }
 
-async function registerForEvent(eventId: string, event: AppSyncEvent) {
-  const userId = event.identity.sub;
+async function registerForEvent(eventId: string, event: AppSyncResolverEvent<ResolverArgs>) {
+  if (!event.identity) {
+    throw new Error('Unauthorized: No identity found');
+  }
+  
+  const identity = event.identity as AppSyncIdentityCognito;
+  const userId = identity.sub;
   const registrationId = `reg-${Date.now()}`;
   const timestamp = new Date().toISOString();
   

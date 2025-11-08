@@ -1,0 +1,53 @@
+service: tems-users-service
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  profile: tems-${self:provider.stage}
+  
+  environment:
+    TABLE_NAME: terrapin-events-dynamodb-${self:provider.stage}
+    STAGE: ${self:provider.stage}
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:Query
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/terrapin-events-dynamodb-${self:provider.stage}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/terrapin-events-dynamodb-${self:provider.stage}/index/*
+
+plugins:
+  - serverless-esbuild
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    target: node20
+    platform: node
+    format: cjs
+
+functions:
+  getUser:
+    handler: handlers/get-user.handler
+    events:
+      - http:
+          path: users/{userId}
+          method: get
+          cors: true
+    layers:
+      - ${cf:tems-common-layer-${self:provider.stage}.CommonLambdaLayerQualifiedArn}
+
+package:
+  individually: true
