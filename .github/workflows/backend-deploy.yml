@@ -74,8 +74,7 @@ jobs:
       - name: Deploy services
         id: deploy-services
         run: |
-          services=("users" "events")
-#  test "registrations" "notifications"
+          services=("users")        
           for service in "${services[@]}"; do
               cd services/$service
               serverless deploy --stage dev --verbose

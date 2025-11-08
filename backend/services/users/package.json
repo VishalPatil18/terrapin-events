@@ -9,7 +9,5 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "devDependencies": {
-    "serverless-esbuild": "^1.55.1"
-  }
+  "devDependencies": {}
 }
