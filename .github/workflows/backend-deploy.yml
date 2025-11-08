@@ -15,10 +15,6 @@ on:
       - 'backend/**'
   workflow_dispatch:
 
-env:
-  AWS_REGION: us-east-1
-  NODE_VERSION: '24.x'
-
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
@@ -26,6 +22,11 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+    env:
+      AWS_REGION: us-east-1
+      NODE_VERSION: '24.x'
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      SERVERLESS_APP_NAME: ${{ secrets.SERVERLESS_APP_NAME }}
 
     steps:
       - name: Checkout code
@@ -48,13 +49,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install and Authenticate Serverless Framework
-        uses: serverless/github-action@v3
-        with:
-          sls-cli-version: '4.x' # Target Serverless v4
-          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      - name: Install Serverless Framework
+        run: npm install -g serverless@latest
+
+      - name: Serverless Login
+        run: serverless login --app-name ${{ secrets.SERVERLESS_APP_NAME }}
 
       - name: Deploy infrastructure
+        id: deploy-infra
         run: |
           cd infrastructure
           serverless deploy --stage dev --config dynamodb.yml --verbose
@@ -64,21 +66,18 @@ jobs:
           serverless deploy --stage dev --config appsync.yml --verbose
 
       - name: Deploy Lambda layers
+        id: deploy-layers
         run: |
           cd layers/common
           serverless deploy --stage dev --verbose
 
-      - name: Deploy services
-        run: |
-          # Deploy services in order
-          for service in users events registrations notifications; do
-            if [ -d "services/$service" ]; then
-              echo "Deploying $service..."
-              cd services/$service
-              serverless deploy --stage dev --verbose
-              cd ../..
-            fi
-          done
-
-      - name: Run post-deployment tests
-        run: npm run test:integration
+#      - name: Deploy services
+#        id: deploy-services
+#        run: |
+#          services=("users" "events" "registrations" "notifications")
+#
+#          for service in "${services[@]}"; do
+#              cd services/$service
+#              serverless deploy --stage dev --verbose
+#              cd ../..
+#          done

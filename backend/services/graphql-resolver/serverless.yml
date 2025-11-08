@@ -7,7 +7,7 @@ provider:
   runtime: nodejs20.x
   region: us-east-1
   stage: ${opt:stage, 'dev'}
-  profile: tems-${self:provider.stage}
+#  profile: tems-${self:provider.stage}
   
   environment:
     TABLE_NAME: terrapin-events-dynamodb-${self:provider.stage}
