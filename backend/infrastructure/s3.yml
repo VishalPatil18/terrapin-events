@@ -51,7 +51,7 @@ resources:
                 - DELETE
               AllowedOrigins:
                 - http://localhost:3000
-                - https://tems.shantanu-gonade.com
+                - https://dev.shantanu-gonade.com
               MaxAge: 3000
               
         # Public Access Block

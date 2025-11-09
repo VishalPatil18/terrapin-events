@@ -109,10 +109,10 @@ resources:
         AllowedOAuthFlowsUserPoolClient: true
         CallbackURLs:
           - http://localhost:3000/auth/callback
-          - https://tems.shantanu-gonade.com/auth/callback
+          - https://dev.shantanu-gonade.com/auth/callback
         LogoutURLs:
           - http://localhost:3000
-          - https://tems.shantanu-gonade.com
+          - https://dev.shantanu-gonade.com
           
         # Token Configuration
         AccessTokenValidity: 1
