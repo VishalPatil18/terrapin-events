@@ -35,9 +35,11 @@ import type {
   SignUpResponse,
   SignInResponse,
   UseAuthReturn,
-  UserRole,
-  CognitoUser,
 } from '@/types/auth';
+
+import type { AuthUser, FetchUserAttributesOutput } from 'aws-amplify/auth';
+
+import { UserRole } from '@/types/auth';
 
 import { AUTH_ERROR_CODES } from '@/types/auth';
 
@@ -48,7 +50,10 @@ import { AUTH_ERROR_CODES } from '@/types/auth';
 /**
  * Converts Cognito user attributes to our User type
  */
-function mapCognitoUserToUser(cognitoUser: any, attributes: Record<string, string>): User {
+function mapCognitoUserToUser(
+  cognitoUser: AuthUser,
+  attributes: FetchUserAttributesOutput
+): User {
   const role = (attributes['custom:role'] as UserRole) || UserRole.PARTICIPANT;
   
   return {
@@ -67,13 +72,14 @@ function mapCognitoUserToUser(cognitoUser: any, attributes: Record<string, strin
 /**
  * Converts error to AuthError type
  */
-function handleAuthError(error: any): AuthError {
+function handleAuthError(error: unknown): AuthError {
+  const err = error as { name?: string; code?: string; message?: string };
   console.error('Auth error:', error);
   
   return {
-    code: error.name || error.code || AUTH_ERROR_CODES.UNKNOWN_ERROR,
-    message: error.message || 'An unexpected error occurred',
-    name: error.name || 'Error',
+    code: err.name || err.code || AUTH_ERROR_CODES.UNKNOWN_ERROR,
+    message: err.message || 'An unexpected error occurred',
+    name: err.name || 'Error',
   };
 }
 
@@ -94,26 +100,6 @@ export function useAuth(): UseAuthReturn {
   const isAuthenticated = useMemo(() => user !== null, [user]);
 
   // ============================================================================
-  // Initialize Auth State
-  // ============================================================================
-
-  useEffect(() => {
-    checkAuthState();
-  }, []);
-
-  async function checkAuthState() {
-    try {
-      setIsLoading(true);
-      const currentUser = await fetchCurrentUser();
-      setUser(currentUser);
-    } catch (err) {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // ============================================================================
   // Helper: Fetch Current User
   // ============================================================================
 
@@ -123,10 +109,30 @@ export function useAuth(): UseAuthReturn {
       const attributes = await fetchUserAttributes();
       
       return mapCognitoUserToUser(cognitoUser, attributes);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }, []);
+
+  // ============================================================================
+  // Initialize Auth State
+  // ============================================================================
+
+  const checkAuthState = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const currentUser = await fetchCurrentUser();
+      setUser(currentUser);
+    } catch (_err) {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchCurrentUser]);
+
+  useEffect(() => {
+    checkAuthState();
+  }, [checkAuthState]);
 
   // ============================================================================
   // Sign Up
@@ -153,21 +159,24 @@ export function useAuth(): UseAuthReturn {
           },
         });
 
+        // Type narrowing: only access codeDeliveryDetails if it exists on this step type
+        const codeDeliveryDetails = 'codeDeliveryDetails' in result.nextStep && result.nextStep.codeDeliveryDetails
+          ? {
+              deliveryMedium: result.nextStep.codeDeliveryDetails.deliveryMedium || 'EMAIL',
+              destination: result.nextStep.codeDeliveryDetails.destination || email,
+            }
+          : undefined;
+
         return {
           isSignUpComplete: result.isSignUpComplete,
           userId: result.userId || '',
           nextStep: {
             signUpStep: result.nextStep.signUpStep,
-            codeDeliveryDetails: result.nextStep.codeDeliveryDetails
-              ? {
-                  deliveryMedium: result.nextStep.codeDeliveryDetails.deliveryMedium || 'EMAIL',
-                  destination: result.nextStep.codeDeliveryDetails.destination || email,
-                }
-              : undefined,
+            codeDeliveryDetails,
           },
         };
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -206,8 +215,8 @@ export function useAuth(): UseAuthReturn {
             signInStep: result.nextStep.signInStep,
           },
         };
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -228,8 +237,8 @@ export function useAuth(): UseAuthReturn {
       
       await amplifySignOut();
       setUser(null);
-    } catch (err) {
-      const authError = handleAuthError(err);
+    } catch (_err) {
+      const authError = handleAuthError(_err);
       setError(authError);
       throw authError;
     } finally {
@@ -253,8 +262,8 @@ export function useAuth(): UseAuthReturn {
           username: email.toLowerCase(),
           confirmationCode: code,
         });
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -279,8 +288,8 @@ export function useAuth(): UseAuthReturn {
         await resetPassword({
           username: email.toLowerCase(),
         });
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -307,8 +316,8 @@ export function useAuth(): UseAuthReturn {
           confirmationCode: code,
           newPassword,
         });
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -334,8 +343,8 @@ export function useAuth(): UseAuthReturn {
           oldPassword,
           newPassword,
         });
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -358,8 +367,8 @@ export function useAuth(): UseAuthReturn {
         await resendSignUpCode({
           username: email.toLowerCase(),
         });
-      } catch (err) {
-        const authError = handleAuthError(err);
+      } catch (_err) {
+        const authError = handleAuthError(_err);
         setError(authError);
         throw authError;
       } finally {
@@ -379,8 +388,8 @@ export function useAuth(): UseAuthReturn {
       const currentUser = await fetchCurrentUser();
       setUser(currentUser);
       return currentUser;
-    } catch (err) {
-      const authError = handleAuthError(err);
+    } catch (_err) {
+      const authError = handleAuthError(_err);
       setError(authError);
       return null;
     }
@@ -396,8 +405,8 @@ export function useAuth(): UseAuthReturn {
       await fetchAuthSession({ forceRefresh: true });
       const currentUser = await fetchCurrentUser();
       setUser(currentUser);
-    } catch (err) {
-      const authError = handleAuthError(err);
+    } catch (_err) {
+      const authError = handleAuthError(_err);
       setError(authError);
       // If refresh fails, user might need to re-authenticate
       setUser(null);
@@ -413,7 +422,7 @@ export function useAuth(): UseAuthReturn {
     try {
       const attributes = await fetchUserAttributes();
       return attributes.email_verified === 'true';
-    } catch (err) {
+    } catch (_err) {
       return false;
     }
   }, []);

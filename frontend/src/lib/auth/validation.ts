@@ -96,7 +96,7 @@ export type SignUpFormData = z.infer<typeof signUpSchema>;
 export const signInSchema = z.object({
   email: umdEmailValidator,
   password: z.string().min(1, 'Password is required'),
-  rememberMe: z.boolean().optional().default(false),
+  rememberMe: z.boolean(),
 });
 
 export type SignInFormData = z.infer<typeof signInSchema>;

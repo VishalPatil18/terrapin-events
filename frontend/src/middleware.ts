@@ -41,16 +41,18 @@ function isPublicRoute(pathname: string): boolean {
  */
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const response = NextResponse.next();
   
   try {
     // Check authentication status using Amplify server-side utilities
+    // For middleware, we need to pass both request and response objects
     const session = await runWithAmplifyServerContext({
-      nextServerContext: { request },
+      nextServerContext: { request, response },
       operation: async (contextSpec) => {
         try {
           const session = await fetchAuthSession(contextSpec);
           return session;
-        } catch (error) {
+        } catch (_error) {
           return null;
         }
       },
