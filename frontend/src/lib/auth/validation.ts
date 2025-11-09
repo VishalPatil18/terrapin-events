@@ -191,7 +191,7 @@ export function validateEmail(email: string): {
       return {
         isValid: false,
         isUmdEmail: email.toLowerCase().endsWith('@umd.edu'),
-        error: error.errors[0]?.message || 'Invalid email',
+        error: error.issues[0]?.message || 'Invalid email',
       };
     }
     return { isValid: false, isUmdEmail: false, error: 'Invalid email' };
@@ -212,7 +212,7 @@ export function validatePassword(password: string): {
     passwordValidator.parse(password);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      errors.push(...error.errors.map(e => e.message));
+      errors.push(...error.issues.map(e => e.message));
     }
   }
 
@@ -261,7 +261,7 @@ export function validateVerificationCode(code: string): {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        error: error.errors[0]?.message || 'Invalid verification code',
+        error: error.issues[0]?.message || 'Invalid verification code',
       };
     }
     return { isValid: false, error: 'Invalid verification code' };
@@ -278,7 +278,7 @@ export function validateVerificationCode(code: string): {
 export function formatZodErrors(error: z.ZodError): Record<string, string> {
   const formatted: Record<string, string> = {};
   
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const path = err.path.join('.');
     if (path) {
       formatted[path] = err.message;
