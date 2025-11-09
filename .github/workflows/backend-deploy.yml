@@ -71,13 +71,12 @@ jobs:
           cd layers/common
           serverless deploy --stage dev --verbose
 
-#      - name: Deploy services
-#        id: deploy-services
-#        run: |
-#          services=("users" "events" "registrations" "notifications")
-#
-#          for service in "${services[@]}"; do
-#              cd services/$service
-#              serverless deploy --stage dev --verbose
-#              cd ../..
-#          done
+      - name: Deploy services
+        id: deploy-services
+        run: |
+          services=("users")        
+          for service in "${services[@]}"; do
+              cd services/$service
+              serverless deploy --stage dev --verbose
+              cd ../..
+          done
