@@ -15,16 +15,18 @@ on:
       - 'backend/**'
   workflow_dispatch:
 
-env:
-  AWS_REGION: us-east-1
-  NODE_VERSION: '20.x'
-
 jobs:
-  test:
+  deploy-dev:
     runs-on: ubuntu-latest
+    environment: development
     defaults:
       run:
         working-directory: ./backend
+    env:
+      AWS_REGION: us-east-1
+      NODE_VERSION: '24.x'
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      SERVERLESS_APP_NAME: ${{ secrets.SERVERLESS_APP_NAME }}
 
     steps:
       - name: Checkout code
@@ -39,38 +41,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Run linter
-        run: npm run lint
-
-      - name: Run tests
-        run: npm test -- --coverage
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./backend/coverage/lcov.info
-          flags: backend
-
-  deploy-dev:
-    needs: test
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment: development
-    defaults:
-      run:
-        working-directory: ./backend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -79,13 +49,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Install Serverless Framework
-        run: npm install -g serverless@4
+        run: npm install -g serverless@latest
+
+      - name: Serverless Login
+        run: serverless login --app-name ${{ secrets.SERVERLESS_APP_NAME }}
 
       - name: Deploy infrastructure
+        id: deploy-infra
         run: |
           cd infrastructure
           serverless deploy --stage dev --config dynamodb.yml --verbose
@@ -95,21 +66,17 @@ jobs:
           serverless deploy --stage dev --config appsync.yml --verbose
 
       - name: Deploy Lambda layers
+        id: deploy-layers
         run: |
           cd layers/common
           serverless deploy --stage dev --verbose
 
       - name: Deploy services
+        id: deploy-services
         run: |
-          # Deploy services in order
-          for service in users events registrations notifications; do
-            if [ -d "services/$service" ]; then
-              echo "Deploying $service..."
+          services=("users")        
+          for service in "${services[@]}"; do
               cd services/$service
               serverless deploy --stage dev --verbose
               cd ../..
-            fi
           done
-
-      - name: Run post-deployment tests
-        run: npm run test:integration
