@@ -4,7 +4,11 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
   
+  // Output configuration for Amplify SSR
+  output: 'standalone',
+  
   // Ensure environment variables are available at runtime
+  // This is critical for AWS Amplify deployments with Next.js SSR
   env: {
     NEXT_PUBLIC_AWS_REGION: process.env.NEXT_PUBLIC_AWS_REGION,
     NEXT_PUBLIC_COGNITO_USER_POOL_ID: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,

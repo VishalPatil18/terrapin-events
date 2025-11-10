@@ -1,0 +1,36 @@
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            # Install dependencies with caching for faster builds
+            - npm ci --cache .npm --prefer-offline
+
+        build:
+          commands:
+            # Create .env.production file with all NEXT_PUBLIC_ environment variables
+            # This is CRITICAL for Next.js SSR on Amplify in a monorepo
+            # The file is created in the frontend directory (current working directory)
+            - echo "Creating .env.production file with environment variables..."
+            - env | grep -e NEXT_PUBLIC_ >> .env.production
+            
+            # Verify the file was created and show contents (for debugging)
+            - echo "Environment variables written to .env.production:"
+            - cat .env.production
+            - echo ""
+
+            # Build the Next.js application
+            - npm run build
+            
+      artifacts:
+        # Artifacts are relative to appRoot (frontend directory)
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .next/cache/**/*
+          - .npm/**/*
+          - node_modules/**/*
+    appRoot: frontend
