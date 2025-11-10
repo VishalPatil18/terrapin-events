@@ -42,7 +42,17 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          NEXT_PUBLIC_AWS_REGION: us-east-1
+          NEXT_PUBLIC_AWS_REGION: ${{ secrets.NEXT_PUBLIC_AWS_REGION }}
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+          NEXT_PUBLIC_APPSYNC_URL: ${{ secrets.NEXT_PUBLIC_APPSYNC_URL }}
+          NEXT_PUBLIC_APPSYNC_API_KEY: ${{ secrets.NEXT_PUBLIC_APPSYNC_API_KEY }}
+          NEXT_PUBLIC_S3_BUCKET: ${{ secrets.NEXT_PUBLIC_S3_BUCKET }}
+          NEXT_PUBLIC_CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.NEXT_PUBLIC_CLOUDFRONT_DISTRIBUTION_ID }}
+          NEXT_PUBLIC_CLOUDFRONT_DOMAIN: ${{ secrets.NEXT_PUBLIC_CLOUDFRONT_DOMAIN }}
+          NEXT_PUBLIC_APP_URL: https://dev.shantanu-gonade.com
+          NEXT_PUBLIC_APP_NAME: Terrapin Events
+          NEXT_PUBLIC_DOMAIN: shantanu-gonade.com
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -85,6 +95,9 @@ jobs:
           NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
           NEXT_PUBLIC_APPSYNC_URL: ${{ secrets.NEXT_PUBLIC_APPSYNC_URL }}
           NEXT_PUBLIC_APPSYNC_API_KEY: ${{ secrets.NEXT_PUBLIC_APPSYNC_API_KEY }}
-          NEXT_PUBLIC_S3_BUCKET: ${secrets.NEXT_PUBLIC_S3_BUCKET}
-          NEXT_PUBLIC_CLOUDFRONT_DISTRIBUTION_ID: ${secrets.NEXT_PUBLIC_CLOUDFRONT_DISTRIBUTION_ID}
-          NEXT_PUBLIC_CLOUDFRONT_DOMAIN: ${secrets.NEXT_PUBLIC_CLOUDFRONT_DOMAIN}
+          NEXT_PUBLIC_S3_BUCKET: ${{ secrets.NEXT_PUBLIC_S3_BUCKET }}
+          NEXT_PUBLIC_CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.NEXT_PUBLIC_CLOUDFRONT_DISTRIBUTION_ID }}
+          NEXT_PUBLIC_CLOUDFRONT_DOMAIN: ${{ secrets.NEXT_PUBLIC_CLOUDFRONT_DOMAIN }}
+          NEXT_PUBLIC_APP_URL: https://dev.shantanu-gonade.com
+          NEXT_PUBLIC_APP_NAME: Terrapin Events
+          NEXT_PUBLIC_DOMAIN: shantanu-gonade.com
