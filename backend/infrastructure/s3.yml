@@ -52,6 +52,7 @@ resources:
               AllowedOrigins:
                 - http://localhost:3000
                 - https://dev.shantanu-gonade.com
+                - https://tems.shantanu-gonade.com
               MaxAge: 3000
               
         # Public Access Block
