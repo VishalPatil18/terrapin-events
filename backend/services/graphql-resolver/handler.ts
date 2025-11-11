@@ -1,6 +1,10 @@
-import { AppSyncResolverHandler, AppSyncResolverEvent, AppSyncIdentityCognito } from 'aws-lambda';
+import { AppSyncResolverHandler, AppSyncResolverEvent } from 'aws-lambda';
 import { db } from '../../shared/utils/dynamodb';
 import { logger } from '../../shared/utils/logger';
+import { 
+  getUserIdFromIdentity,
+  isCognitoIdentity 
+} from '../../shared/types/appsync.types';
 
 // Define the arguments types for different operations
 interface CreateEventArgs {
@@ -62,12 +66,11 @@ export const handler: AppSyncResolverHandler<ResolverArgs, any> = async (event) 
 };
 
 async function getCurrentUser(event: AppSyncResolverEvent<ResolverArgs>) {
-  if (!event.identity) {
+  const userId = getUserIdFromIdentity(event.identity);
+  
+  if (!userId) {
     throw new Error('Unauthorized: No identity found');
   }
-  
-  const identity = event.identity as AppSyncIdentityCognito;
-  const userId = identity.sub;
   
   const user = await db.get(`USER#${userId}`, 'METADATA');
   
@@ -79,12 +82,12 @@ async function getCurrentUser(event: AppSyncResolverEvent<ResolverArgs>) {
 }
 
 async function createEvent(input: any, event: AppSyncResolverEvent<ResolverArgs>) {
-  if (!event.identity) {
+  const organizerId = getUserIdFromIdentity(event.identity);
+  
+  if (!organizerId) {
     throw new Error('Unauthorized: No identity found');
   }
   
-  const identity = event.identity as AppSyncIdentityCognito;
-  const organizerId = identity.sub;
   const eventId = `evt-${Date.now()}`;
   const timestamp = new Date().toISOString();
   
@@ -112,12 +115,11 @@ async function createEvent(input: any, event: AppSyncResolverEvent<ResolverArgs>
 }
 
 async function updateEvent(id: string, input: any, event: AppSyncResolverEvent<ResolverArgs>) {
-  if (!event.identity) {
+  const userId = getUserIdFromIdentity(event.identity);
+  
+  if (!userId) {
     throw new Error('Unauthorized: No identity found');
   }
-  
-  const identity = event.identity as AppSyncIdentityCognito;
-  const userId = identity.sub;
   
   // Get the existing event
   const existingEvent = await db.get(`EVENT#${id}`, 'METADATA');
@@ -151,12 +153,12 @@ async function updateEvent(id: string, input: any, event: AppSyncResolverEvent<R
 }
 
 async function registerForEvent(eventId: string, event: AppSyncResolverEvent<ResolverArgs>) {
-  if (!event.identity) {
+  const userId = getUserIdFromIdentity(event.identity);
+  
+  if (!userId) {
     throw new Error('Unauthorized: No identity found');
   }
   
-  const identity = event.identity as AppSyncIdentityCognito;
-  const userId = identity.sub;
   const registrationId = `reg-${Date.now()}`;
   const timestamp = new Date().toISOString();
   

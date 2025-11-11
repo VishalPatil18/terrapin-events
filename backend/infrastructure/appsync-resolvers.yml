@@ -1,0 +1,166 @@
+service: terrapin-events-appsync-resolvers
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+#  profile: tems-${self:provider.stage}
+
+resources:
+  Resources:
+    # Lambda Data Sources
+    CreateEventDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: CreateEventDataSource
+        Description: Lambda data source for creating events
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-CreateEventLambdaArn
+
+    UpdateEventDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: UpdateEventDataSource
+        Description: Lambda data source for updating events
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-UpdateEventLambdaArn
+
+    DeleteEventDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: DeleteEventDataSource
+        Description: Lambda data source for deleting events
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-DeleteEventLambdaArn
+
+    PublishEventDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: PublishEventDataSource
+        Description: Lambda data source for publishing events
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-PublishEventLambdaArn
+
+    # Lambda Invoke Role for AppSync
+    AppSyncLambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: appsync.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: AppSyncLambdaInvokePolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - lambda:InvokeFunction
+                  Resource:
+                    - Fn::ImportValue: ${self:provider.stage}-CreateEventLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-UpdateEventLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-DeleteEventLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-PublishEventLambdaArn
+
+    # Lambda-backed Mutation Resolvers
+    CreateEventResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: createEvent
+        DataSourceName: !GetAtt CreateEventDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    UpdateEventMutationResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: updateEvent
+        DataSourceName: !GetAtt UpdateEventDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    DeleteEventMutationResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: deleteEvent
+        DataSourceName: !GetAtt DeleteEventDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    PublishEventMutationResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: publishEvent
+        DataSourceName: !GetAtt PublishEventDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+  Outputs:
+    CreateEventDataSourceName:
+      Description: Name of CreateEvent DataSource
+      Value: !GetAtt CreateEventDataSource.Name
+      Export:
+        Name: ${self:provider.stage}-CreateEventDataSourceName

@@ -24,6 +24,16 @@ export enum EventStatus {
   COMPLETED = 'COMPLETED'
 }
 
+export enum EventCategory {
+  ACADEMIC = 'ACADEMIC',
+  SOCIAL = 'SOCIAL',
+  SPORTS = 'SPORTS',
+  ARTS = 'ARTS',
+  TECH = 'TECH',
+  CAREER = 'CAREER',
+  OTHER = 'OTHER'
+}
+
 export enum RegistrationStatus {
   REGISTERED = 'REGISTERED',
   WAITLISTED = 'WAITLISTED',

@@ -11,7 +11,7 @@ provider:
 
 resources:
   Resources:
-    # AppSync GraphQL API - test
+    # AppSync GraphQL API
     GraphQLApi:
       Type: AWS::AppSync::GraphQLApi
       Properties:
