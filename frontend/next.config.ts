@@ -7,6 +7,20 @@ const nextConfig: NextConfig = {
   // Output configuration for Amplify SSR
   output: 'standalone',
   
+  // Image configuration for external domains
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudfront.net',
+      },
+    ],
+  },
+  
   // Ensure environment variables are available at runtime
   // This is critical for AWS Amplify deployments with Next.js SSR
   env: {
