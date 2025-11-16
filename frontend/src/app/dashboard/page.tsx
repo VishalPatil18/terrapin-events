@@ -6,6 +6,7 @@
 'use client';
 
 import { useAuthContext } from '@/lib/auth/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Calendar, Users, TrendingUp, Clock } from 'lucide-react';
 
 interface StatCardProps {
@@ -41,6 +42,11 @@ function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
 
 export default function DashboardPage() {
   const { user } = useAuthContext();
+  const router = useRouter();
+
+  const handleCreateEvent = () => {
+    router.push('/events/new');
+  };
 
   return (
     <div className="space-y-8">
@@ -147,7 +153,10 @@ export default function DashboardPage() {
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={handleCreateEvent}
+            className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             <Calendar className="h-5 w-5 text-gray-600 mr-2" />
             <span className="text-sm font-medium text-gray-900">Create Event</span>
           </button>
