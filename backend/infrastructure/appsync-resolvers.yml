@@ -11,7 +11,7 @@ provider:
 
 resources:
   Resources:
-    # Lambda Data Sources
+    # ==================== EVENT DATA SOURCES ====================
     CreateEventDataSource:
       Type: AWS::AppSync::DataSource
       Properties:
@@ -64,7 +64,60 @@ resources:
           LambdaFunctionArn:
             Fn::ImportValue: ${self:provider.stage}-PublishEventLambdaArn
 
-    # Lambda Invoke Role for AppSync
+    # ==================== REGISTRATION DATA SOURCES ====================
+    RegisterForEventDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: RegisterForEventDataSource
+        Description: Lambda data source for event registration
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-RegisterForEventLambdaArn
+
+    CancelRegistrationDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: CancelRegistrationDataSource
+        Description: Lambda data source for cancelling registration
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-CancelRegistrationLambdaArn
+
+    CheckInAttendeeDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: CheckInAttendeeDataSource
+        Description: Lambda data source for checking in attendees
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-CheckInAttendeeLambdaArn
+
+    ListMyRegistrationsDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: ListMyRegistrationsDataSource
+        Description: Lambda data source for listing user registrations
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-ListMyRegistrationsLambdaArn
+
+    # ==================== IAM ROLE ====================
     AppSyncLambdaRole:
       Type: AWS::IAM::Role
       Properties:
@@ -84,12 +137,18 @@ resources:
                   Action:
                     - lambda:InvokeFunction
                   Resource:
+                    # Event Lambdas
                     - Fn::ImportValue: ${self:provider.stage}-CreateEventLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-UpdateEventLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-DeleteEventLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-PublishEventLambdaArn
+                    # Registration Lambdas
+                    - Fn::ImportValue: ${self:provider.stage}-RegisterForEventLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-CancelRegistrationLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-CheckInAttendeeLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-ListMyRegistrationsLambdaArn
 
-    # Lambda-backed Mutation Resolvers
+    # ==================== EVENT MUTATION RESOLVERS ====================
     CreateEventResolver:
       Type: AWS::AppSync::Resolver
       Properties:
@@ -158,9 +217,85 @@ resources:
         ResponseMappingTemplate: |
           $util.toJson($context.result)
 
+    # ==================== REGISTRATION MUTATION RESOLVERS ====================
+    RegisterForEventResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: registerForEvent
+        DataSourceName: !GetAtt RegisterForEventDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    CancelRegistrationResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: cancelRegistration
+        DataSourceName: !GetAtt CancelRegistrationDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    CheckInAttendeeResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: checkInAttendee
+        DataSourceName: !GetAtt CheckInAttendeeDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    # ==================== REGISTRATION QUERY RESOLVERS ====================
+    ListMyRegistrationsResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: listMyRegistrations
+        DataSourceName: !GetAtt ListMyRegistrationsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
   Outputs:
     CreateEventDataSourceName:
       Description: Name of CreateEvent DataSource
       Value: !GetAtt CreateEventDataSource.Name
       Export:
         Name: ${self:provider.stage}-CreateEventDataSourceName
+
+    RegisterForEventDataSourceName:
+      Description: Name of RegisterForEvent DataSource
+      Value: !GetAtt RegisterForEventDataSource.Name
+      Export:
+        Name: ${self:provider.stage}-RegisterForEventDataSourceName
