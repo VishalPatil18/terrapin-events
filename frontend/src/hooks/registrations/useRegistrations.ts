@@ -167,7 +167,7 @@ export function useRegistrationActions() {
 
       const input: RegisterForEventInput = { eventId };
       const registration = await registrationsAPI.registerForEvent(input, user.userId);
-      
+
       // Set success message based on status
       if (registration.status === RegistrationStatus.WAITLISTED) {
         setSuccess('Added to waitlist! You will be notified if a spot opens up.');
