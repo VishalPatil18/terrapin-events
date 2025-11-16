@@ -83,6 +83,18 @@ jobs:
           cd services/events
           serverless deploy --stage dev --verbose
 
+      - name: Install registrations service dependencies
+        id: install-registrations-deps
+        run: |
+          cd services/registrations
+          npm ci
+
+      - name: Deploy registrations service
+        id: deploy-registrations
+        run: |
+          cd services/registrations
+          serverless deploy --stage dev --verbose
+
       - name: Deploy AppSync resolvers
         id: deploy-appsync-resolvers
         run: |

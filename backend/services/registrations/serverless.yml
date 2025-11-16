@@ -1,0 +1,235 @@
+service: terrapin-events-registrations
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_ACCOUNT_ID: ${aws:accountId}
+    # Use CloudFormation export names directly
+    DYNAMODB_TABLE_NAME: 
+      Fn::ImportValue: ${self:provider.stage}-TemsTableName
+    EVENT_BUS_NAME: ${self:custom.eventBusName}
+    
+  iam:
+    role:
+      statements:
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            - dynamodb:BatchWriteItem
+            - dynamodb:ConditionCheckItem
+          Resource:
+            # Use CloudFormation ImportValue for IAM resources
+            - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+            - Fn::Join:
+                - ''
+                - - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                  - '/index/*'
+        
+        # EventBridge permissions
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource:
+            - arn:aws:events:${self:provider.region}:${aws:accountId}:event-bus/${self:custom.eventBusName}
+        
+        # SES permissions for email notifications
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: '*'
+
+custom:
+  eventBusName: terrapin-events-lambdas-${self:provider.stage}
+  # Use CloudFormation ImportValue for Cognito ARN
+  cognitoUserPoolArn:
+    Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolArn
+
+# Native TypeScript support in Serverless Framework v4
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    format: cjs
+    external:
+      - '@aws-sdk/*'
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!.build/**'
+
+functions:
+  # Register for Event Handler
+  registerForEvent:
+    handler: handlers/register.handler
+    name: ${self:service}-register-${self:provider.stage}
+    description: Lambda handler for event registration with capacity management and waitlist
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: registerForEvent
+    events:
+      - http:
+          path: registrations
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Cancel Registration Handler
+  cancelRegistration:
+    handler: handlers/cancel.handler
+    name: ${self:service}-cancel-${self:provider.stage}
+    description: Lambda handler for cancelling registration and promoting waitlist
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: cancelRegistration
+    events:
+      - http:
+          path: registrations/{id}
+          method: delete
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Check-in Handler
+  checkInAttendee:
+    handler: handlers/checkin.handler
+    name: ${self:service}-checkin-${self:provider.stage}
+    description: Lambda handler for checking in attendees via QR code
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: checkInAttendee
+    events:
+      - http:
+          path: registrations/{id}/checkin
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # List My Registrations Handler
+  listMyRegistrations:
+    handler: handlers/list.handler
+    name: ${self:service}-list-${self:provider.stage}
+    description: Lambda handler for listing user's registrations
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: listMyRegistrations
+    events:
+      - http:
+          path: registrations/my
+          method: get
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Promote Waitlist Handler (EventBridge trigger)
+  promoteWaitlist:
+    handler: handlers/promote-waitlist.handler
+    name: ${self:service}-promote-waitlist-${self:provider.stage}
+    description: EventBridge handler for promoting waitlist when registration cancelled
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: promoteWaitlist
+    events:
+      - eventBridge:
+          eventBus: ${self:custom.eventBusName}
+          pattern:
+            source:
+              - tems.registrations
+            detail-type:
+              - RegistrationCancelled
+
+  # Email Notification Handler (EventBridge trigger)
+  emailNotification:
+    handler: handlers/email-handler.handler
+    name: ${self:service}-email-${self:provider.stage}
+    description: EventBridge handler for sending registration emails
+    memorySize: 256
+    timeout: 29
+    environment:
+      FUNCTION_NAME: emailNotification
+      SES_FROM_EMAIL: noreply@terrapineve nts.umd.edu  # Update this
+    events:
+      - eventBridge:
+          eventBus: ${self:custom.eventBusName}
+          pattern:
+            source:
+              - tems.registrations
+            detail-type:
+              - RegistrationCreated
+              - RegistrationCancelled
+              - WaitlistAdded
+              - WaitlistPromoted
+
+resources:
+  Outputs:
+    RegisterForEventLambdaArn:
+      Description: ARN of registerForEvent Lambda function
+      Value:
+        Fn::GetAtt:
+          - RegisterForEventLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-RegisterForEventLambdaArn
+
+    CancelRegistrationLambdaArn:
+      Description: ARN of cancelRegistration Lambda function
+      Value:
+        Fn::GetAtt:
+          - CancelRegistrationLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-CancelRegistrationLambdaArn
+
+    CheckInAttendeeLambdaArn:
+      Description: ARN of checkInAttendee Lambda function
+      Value:
+        Fn::GetAtt:
+          - CheckInAttendeeLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-CheckInAttendeeLambdaArn
+
+    ListMyRegistrationsLambdaArn:
+      Description: ARN of listMyRegistrations Lambda function
+      Value:
+        Fn::GetAtt:
+          - ListMyRegistrationsLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-ListMyRegistrationsLambdaArn
