@@ -61,8 +61,8 @@ jobs:
           cd infrastructure
           serverless deploy --stage dev --config dynamodb.yml --verbose
           serverless deploy --stage dev --config cognito.yml --verbose
-          serverless deploy --stage dev --config s3.yml --verbose
           serverless deploy --stage dev --config eventbridge.yml --verbose
+          serverless deploy --stage dev --config s3.yml --verbose
           serverless deploy --stage dev --config appsync.yml --verbose
 
       - name: Deploy Lambda layers
@@ -71,12 +71,32 @@ jobs:
           cd layers/common
           serverless deploy --stage dev --verbose
 
-      - name: Deploy services
-        id: deploy-services
+      - name: Install events service dependencies
+        id: install-events-deps
         run: |
-          services=("users")        
-          for service in "${services[@]}"; do
-              cd services/$service
-              serverless deploy --stage dev --verbose
-              cd ../..
-          done
+          cd services/events
+          npm ci
+
+      - name: Deploy events service
+        id: deploy-events
+        run: |
+          cd services/events
+          serverless deploy --stage dev --verbose
+
+      - name: Deploy AppSync resolvers
+        id: deploy-appsync-resolvers
+        run: |
+          cd infrastructure
+          serverless deploy --stage dev --config appsync-resolvers.yml --verbose
+
+      - name: Install users service dependencies
+        id: install-users-deps
+        run: |
+          cd services/users
+          npm ci
+
+      - name: Deploy users service
+        id: deploy-users
+        run: |
+          cd services/users
+          serverless deploy --stage dev --verbose

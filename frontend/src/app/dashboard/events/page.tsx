@@ -7,10 +7,17 @@
 
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Calendar, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export default function DashboardEventsPage() {
+  const router = useRouter();
+
+  const handleCreateEvent = () => {
+    router.push('/events/new');
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -21,7 +28,7 @@ export default function DashboardEventsPage() {
             Manage your events and registrations
           </p>
         </div>
-        <Button>
+        <Button onClick={handleCreateEvent}>
           <Plus className="h-4 w-4 mr-2" />
           Create Event
         </Button>
