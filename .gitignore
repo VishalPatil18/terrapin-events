@@ -37,3 +37,6 @@ npm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+
+# Dependency Management
+package-lock.json
