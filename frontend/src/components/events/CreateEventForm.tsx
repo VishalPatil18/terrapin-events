@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { 
   createEventSchema, 
@@ -36,7 +37,7 @@ export function CreateEventForm({
 
   const totalSteps = 5;
 
-  const methods = useForm<CreateEventFormData>({
+  const methods = useForm<z.input<typeof createEventSchema>, any, z.output<typeof createEventSchema>>({
     resolver: zodResolver(createEventSchema),
     defaultValues: defaultValues || {
       title: '',

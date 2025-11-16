@@ -11,9 +11,10 @@ export interface AlertProps {
   title?: string;
   children: ReactNode;
   onClose?: () => void;
+  className?: string;
 }
 
-export function Alert({ variant = 'info', title, children, onClose }: AlertProps) {
+export function Alert({ variant = 'info', title, children, onClose, className = '' }: AlertProps) {
   const variants = {
     info: {
       container: 'bg-blue-50 border-blue-200',
@@ -49,7 +50,7 @@ export function Alert({ variant = 'info', title, children, onClose }: AlertProps
   const Icon = config.icon;
 
   return (
-    <div className={`border rounded-lg p-4 ${config.container}`}>
+    <div className={`border rounded-lg p-4 ${config.container} ${className}`}>
       <div className="flex items-start">
         <Icon className={`h-5 w-5 ${config.iconColor} mt-0.5 flex-shrink-0`} />
         
