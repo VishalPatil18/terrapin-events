@@ -42,7 +42,7 @@ export const createEventSchema = z.object({
   capacity: z.number()
     .min(1, 'Capacity must be at least 1')
     .max(10000, 'Capacity cannot exceed 10,000'),
-  tags: z.array(z.string()).optional().default([]),
+  tags: z.array(z.string()).default([]),
 
   // Step 5: Image (optional)
   imageUrl: z.string().url('Please enter a valid image URL').optional().or(z.literal('')),

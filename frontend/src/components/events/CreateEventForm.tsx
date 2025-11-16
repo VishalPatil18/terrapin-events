@@ -141,7 +141,7 @@ export function CreateEventForm({
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-center mb-8">Create Event</h2>
+              <h2 className="text-3xl font-bold text-center mb-8 text-gray-700">Create Event</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -151,7 +151,7 @@ export function CreateEventForm({
                   {...register('title')}
                   type="text"
                   placeholder="Enter event title"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                 />
                 {errors.title && (
                   <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
@@ -164,7 +164,7 @@ export function CreateEventForm({
                 </label>
                 <select
                   {...register('category')}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700"
                 >
                   <option value={EventCategory.ACADEMIC}>Academic</option>
                   <option value={EventCategory.SOCIAL}>Social</option>
@@ -187,7 +187,7 @@ export function CreateEventForm({
                   {...register('description')}
                   rows={6}
                   placeholder="Describe your event..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none resize-none text-gray-700 placeholder:text-gray-500"
                 />
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
@@ -199,7 +199,7 @@ export function CreateEventForm({
           {/* Step 2: Date & Time */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-center mb-8">Date & Time</h2>
+              <h2 className="text-2xl font-bold text-center mb-8 text-gray-700">Date & Time</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -209,7 +209,7 @@ export function CreateEventForm({
                   <input
                     {...register('startDateTime')}
                     type="datetime-local"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                   />
                   {errors.startDateTime && (
                     <p className="mt-1 text-sm text-red-600">{errors.startDateTime.message}</p>
@@ -223,7 +223,7 @@ export function CreateEventForm({
                   <input
                     {...register('endDateTime')}
                     type="datetime-local"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                   />
                   {errors.endDateTime && (
                     <p className="mt-1 text-sm text-red-600">{errors.endDateTime.message}</p>
@@ -236,7 +236,7 @@ export function CreateEventForm({
           {/* Step 3: Location */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-center mb-8">Event Location</h2>
+              <h2 className="text-2xl font-bold text-center mb-8 text-gray-700">Event Location</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -246,7 +246,7 @@ export function CreateEventForm({
                   {...register('location.name')}
                   type="text"
                   placeholder="e.g., Stamp Student Union"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                 />
                 {errors.location?.name && (
                   <p className="mt-1 text-sm text-red-600">{errors.location.name.message}</p>
@@ -262,7 +262,7 @@ export function CreateEventForm({
                     {...register('location.building')}
                     type="text"
                     placeholder="Building name"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                   />
                   {errors.location?.building && (
                     <p className="mt-1 text-sm text-red-600">{errors.location.building.message}</p>
@@ -277,7 +277,7 @@ export function CreateEventForm({
                     {...register('location.room')}
                     type="text"
                     placeholder="Room number"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                   />
                 </div>
               </div>
@@ -290,7 +290,7 @@ export function CreateEventForm({
                   {...register('location.address')}
                   type="text"
                   placeholder="Full address"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                 />
                 {errors.location?.address && (
                   <p className="mt-1 text-sm text-red-600">{errors.location.address.message}</p>
@@ -302,7 +302,7 @@ export function CreateEventForm({
           {/* Step 4: Capacity & Tags */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-center mb-8">Capacity & Tags</h2>
+              <h2 className="text-2xl font-bold text-center mb-8 text-gray-700">Capacity & Tags</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -313,7 +313,7 @@ export function CreateEventForm({
                   type="number"
                   min="1"
                   placeholder="Maximum number of attendees"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                 />
                 {errors.capacity && (
                   <p className="mt-1 text-sm text-red-600">{errors.capacity.message}</p>
@@ -327,7 +327,7 @@ export function CreateEventForm({
                 <input
                   type="text"
                   placeholder="Add tags separated by commas (e.g., workshop, networking, free)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                   onChange={(e) => {
                     const tags = e.target.value.split(',').map(tag => tag.trim()).filter(Boolean);
                     methods.setValue('tags', tags);
@@ -343,7 +343,7 @@ export function CreateEventForm({
           {/* Step 5: Image */}
           {currentStep === 5 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-center mb-8">Event Image</h2>
+              <h2 className="text-2xl font-bold text-center mb-8 text-gray-700">Event Image</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -353,7 +353,7 @@ export function CreateEventForm({
                   {...register('imageUrl')}
                   type="url"
                   placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A20B23] focus:border-transparent outline-none text-gray-700 placeholder:text-gray-500"
                 />
                 {errors.imageUrl && (
                   <p className="mt-1 text-sm text-red-600">{errors.imageUrl.message}</p>
@@ -431,7 +431,7 @@ export function CreateEventForm({
             <button
               type="button"
               onClick={() => router.back()}
-              className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+              className="text-gray-600 hover:text-gray-700 text-sm font-medium"
             >
               Cancel
             </button>
