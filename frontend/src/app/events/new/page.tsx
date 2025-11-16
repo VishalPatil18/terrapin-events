@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { CreateEventForm } from '@/components/events/CreateEventForm';
 import { CreateEventFormData } from '@/lib/validations/event.validation';
 import { createEvent, publishEvent } from '@/lib/api/events.api';
-import { CreateEventInput, EventStatus } from '@/types/event.types';
+import { CreateEventInput } from '@/types/event.types';
 
 export default function NewEventPage() {
   const router = useRouter();

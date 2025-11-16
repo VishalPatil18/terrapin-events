@@ -28,7 +28,7 @@ export const createEventSchema = z.object({
     .min(20, 'Description must be at least 20 characters')
     .max(2000, 'Description must be less than 2000 characters'),
   category: z.nativeEnum(EventCategory, {
-    errorMap: () => ({ message: 'Please select a category' }),
+    message: 'Please select a category',
   }),
 
   // Step 2: Date & Time
