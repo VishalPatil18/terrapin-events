@@ -10,6 +10,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { CreateEventForm } from '@/components/events/CreateEventForm';
 import { CreateEventFormData, formatDateTimeForInput } from '@/lib/validations/event.validation';
 import { useEvent } from '@/hooks/events/useEvents';
+import { updateEvent, publishEvent } from '@/lib/api/events.api';
+import { UpdateEventInput, EventStatus } from '@/types/event.types';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -23,13 +25,32 @@ export default function EditEventPage() {
 
   const handleSubmit = async (data: CreateEventFormData, isDraft: boolean) => {
     try {
-      console.log('Updating event:', eventId, data, 'isDraft:', isDraft);
-      
-      // TODO: Call update event API
-      // await updateEvent(eventId, data);
-      
-      // For now, just log and redirect
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // Transform form data to API input format
+      const eventInput: UpdateEventInput = {
+        title: data.title,
+        description: data.description,
+        startDateTime: data.startDateTime,
+        endDateTime: data.endDateTime,
+        location: {
+          name: data.location.name,
+          building: data.location.building,
+          room: data.location.room,
+          address: data.location.address,
+          coordinates: data.location.coordinates,
+        },
+        category: data.category,
+        capacity: data.capacity,
+        tags: data.tags,
+        imageUrl: data.imageUrl,
+      };
+
+      // Update the event
+      const updatedEvent = await updateEvent(eventId, eventInput);
+
+      // If not saving as draft and currently in draft status, publish the event
+      if (!isDraft && event?.status === EventStatus.DRAFT && updatedEvent) {
+        await publishEvent(updatedEvent.id);
+      }
       
       router.push(`/events/${eventId}`);
     } catch (error) {
