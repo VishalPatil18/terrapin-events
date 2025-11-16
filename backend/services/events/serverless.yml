@@ -1,0 +1,188 @@
+service: terrapin-events-lambdas
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+#  profile: tems-${self:provider.stage}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_ACCOUNT_ID: ${aws:accountId}
+    # Use CloudFormation export names directly
+    DYNAMODB_TABLE_NAME: 
+      Fn::ImportValue: ${self:provider.stage}-TemsTableName
+    EVENT_BUS_NAME: ${self:custom.eventBusName}
+    
+  iam:
+    role:
+      statements:
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            - dynamodb:BatchWriteItem
+          Resource:
+            # Use CloudFormation ImportValue for IAM resources
+            - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+            - Fn::Join:
+                - ''
+                - - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                  - '/index/*'
+        
+        # EventBridge permissions
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource:
+            - arn:aws:events:${self:provider.region}:${aws:accountId}:event-bus/${self:custom.eventBusName}
+
+custom:
+  eventBusName: ${self:service}-${self:provider.stage}
+  # Use CloudFormation ImportValue for Cognito ARN
+  cognitoUserPoolArn:
+    Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolArn
+
+# Native TypeScript support in Serverless Framework v4
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    format: cjs
+    external:
+      - '@aws-sdk/*'
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!.build/**'
+
+functions:
+  # Create Event Handler
+  createEvent:
+    handler: handlers/createEvent.handler
+    name: ${self:service}-createEvent-${self:provider.stage}
+    description: Lambda handler for creating events with validation and conflict detection
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: createEvent
+    events:
+      - http:
+          path: events
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Update Event Handler
+  updateEvent:
+    handler: handlers/updateEvent.handler
+    name: ${self:service}-updateEvent-${self:provider.stage}
+    description: Lambda handler for updating events with validation and business rules
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: updateEvent
+    events:
+      - http:
+          path: events/{id}
+          method: put
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Delete Event Handler
+  deleteEvent:
+    handler: handlers/deleteEvent.handler
+    name: ${self:service}-deleteEvent-${self:provider.stage}
+    description: Lambda handler for deleting (cancelling) events
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: deleteEvent
+    events:
+      - http:
+          path: events/{id}
+          method: delete
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Publish Event Handler
+  publishEvent:
+    handler: handlers/publishEvent.handler
+    name: ${self:service}-publishEvent-${self:provider.stage}
+    description: Lambda handler for publishing events (DRAFT → PUBLISHED)
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: publishEvent
+    events:
+      - http:
+          path: events/{id}/publish
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+resources:
+  Outputs:
+    CreateEventLambdaArn:
+      Description: ARN of createEvent Lambda function
+      Value:
+        Fn::GetAtt:
+          - CreateEventLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-CreateEventLambdaArn
+
+    UpdateEventLambdaArn:
+      Description: ARN of updateEvent Lambda function
+      Value:
+        Fn::GetAtt:
+          - UpdateEventLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-UpdateEventLambdaArn
+
+    DeleteEventLambdaArn:
+      Description: ARN of deleteEvent Lambda function
+      Value:
+        Fn::GetAtt:
+          - DeleteEventLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-DeleteEventLambdaArn
+
+    PublishEventLambdaArn:
+      Description: ARN of publishEvent Lambda function
+      Value:
+        Fn::GetAtt:
+          - PublishEventLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-PublishEventLambdaArn
