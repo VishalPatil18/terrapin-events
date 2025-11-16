@@ -8,7 +8,7 @@ provider:
   region: us-east-1
   stage: ${opt:stage, 'dev'}
   profile: tems-${self:provider.stage}
-  
+
   environment:
     STAGE: ${self:provider.stage}
     AWS_ACCOUNT_ID: ${aws:accountId}
