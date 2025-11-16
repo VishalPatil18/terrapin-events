@@ -5,7 +5,6 @@
 
 'use client';
 
-import Image from 'next/image';
 import { Calendar, Users, Tag, ExternalLink } from 'lucide-react';
 import { Event, formatEventDateTime, getAvailableSeats, isEventFull, getEventCategoryLabel } from '@/types/event.types';
 
@@ -27,15 +26,14 @@ export function EventDetail({ event }: EventDetailProps) {
   return (
     <div className="space-y-8">
       {/* Hero Image with Title Overlay */}
-      <div className="relative h-96 rounded-xl overflow-hidden">
-        <Image
-          src={imageUrl}
-          alt={event.title}
-          fill
-          className="object-cover"
-          sizes="100vw"
-          priority
-        />
+      <div className="relative h-96 rounded-xl overflow-hidden bg-gray-200">
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         
         <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
