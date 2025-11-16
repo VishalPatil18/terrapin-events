@@ -31,6 +31,10 @@ export function EventCard({ event, className = '' }: EventCardProps) {
           src={imageUrl}
           alt={event.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            // Hide broken image but keep container
+            e.currentTarget.style.display = 'none';
+          }}
         />
         
         {/* Free Badge - shown if no ticket required or $0 */}
