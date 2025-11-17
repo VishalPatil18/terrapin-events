@@ -155,7 +155,7 @@ export function useRegistrationActions() {
    * Register for an event
    */
   const register = useCallback(async (eventId: string): Promise<Registration | null> => {
-    if (!user?.id) {
+    if (!user?.userId) {
       setError('You must be logged in to register');
       return null;
     }
@@ -164,9 +164,9 @@ export function useRegistrationActions() {
       setIsLoading(true);
       setError(null);
       setSuccess(null);
-      
+
       const input: RegisterForEventInput = { eventId };
-      const registration = await registrationsAPI.registerForEvent(input, user.id);
+      const registration = await registrationsAPI.registerForEvent(input, user.userId);
       
       // Set success message based on status
       if (registration.status === RegistrationStatus.WAITLISTED) {
@@ -186,7 +186,7 @@ export function useRegistrationActions() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.userId]);
 
   /**
    * Cancel a registration

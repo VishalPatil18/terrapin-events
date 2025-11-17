@@ -174,9 +174,9 @@ export async function checkUserRegistration(eventId: string): Promise<Registrati
     })) as GraphQLResult<{ checkUserRegistration: Registration | null }>;
 
     return result.data?.checkUserRegistration || null;
-  } catch (error) {
+  } catch (error: unknown) {
     // Not found is expected, return null instead of throwing
-    if (error.errors?.[0]?.extensions?.code === 'NOT_FOUND') {
+    if ((error as any).errors?.[0]?.extensions?.code === 'NOT_FOUND') {
       return null;
     }
     return handleGraphQLError(error);
@@ -234,7 +234,7 @@ export async function registerForEvent(
     }
 
     return result.data.registerForEvent;
-  } catch (error) {
+  } catch (error: any) {
     // Handle specific registration errors
     const code = error.errors?.[0]?.extensions?.code;
     
@@ -294,7 +294,7 @@ export async function cancelRegistration(
     }
 
     return result.data.cancelRegistration;
-  } catch (error) {
+  } catch (error: any) {
     const code = error.errors?.[0]?.extensions?.code;
     
     if (code === 'EVENT_STARTED') {
@@ -333,7 +333,7 @@ export async function acceptPromotion(registrationId: string): Promise<Registrat
     }
 
     return result.data.acceptPromotion;
-  } catch (error) {
+  } catch (error: any) {
     const code = error.errors?.[0]?.extensions?.code;
     
     if (code === 'PROMOTION_EXPIRED') {
@@ -388,7 +388,7 @@ export async function checkInAttendee(input: CheckInInput): Promise<Registration
     }
 
     return result.data.checkInAttendee;
-  } catch (error) {
+  } catch (error: any) {
     const code = error.errors?.[0]?.extensions?.code;
     
     if (code === 'INVALID_QR_CODE') {
