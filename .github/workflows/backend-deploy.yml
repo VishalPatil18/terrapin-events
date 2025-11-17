@@ -95,6 +95,18 @@ jobs:
           cd services/registrations
           serverless deploy --stage dev --verbose
 
+      - name: Install Event Discovery service dependencies
+        id: install-event-search-deps
+        run: |
+          cd services/search
+          npm ci
+
+      - name: Deploy Event Discovery service
+        id: deploy-search
+        run: |
+          cd services/search
+          serverless deploy --stage dev --verbose
+
       - name: Deploy AppSync resolvers
         id: deploy-appsync-resolvers
         run: |
