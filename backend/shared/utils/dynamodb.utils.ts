@@ -379,6 +379,31 @@ export async function createVenueBooking(
 }
 
 /**
+ * Create slug lookup item for URL-based queries
+ * Week 7: Enable getEventBySlug queries
+ */
+export async function createSlugLookup(
+  slug: string,
+  eventId: string
+): Promise<void> {
+  const lookupItem = {
+    PK: `EVENT#SLUG#${slug}`,
+    SK: 'METADATA',
+    entityType: 'SlugLookup',
+    slug,
+    eventId,
+    createdAt: new Date().toISOString(),
+  };
+
+  await client.send(
+    new PutItemCommand({
+      TableName: TABLE_NAME,
+      Item: marshall(lookupItem, { removeUndefinedValues: true }),
+    })
+  );
+}
+
+/**
  * Check for venue conflicts
  */
 export async function checkVenueConflict(

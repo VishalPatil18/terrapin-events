@@ -17,6 +17,12 @@ type Event {
   imageUrl: String
   createdAt: AWSDateTime!
   updatedAt: AWSDateTime!
+  
+  # Week 7: Search and Discovery fields
+  slug: String
+  shareableUrl: String
+  availableSeats: Int
+  waitlistAvailable: Boolean
 }
 
 # User Type
@@ -40,6 +46,39 @@ type Registration {
   waitlistPosition: Int
   registeredAt: AWSDateTime!
   attendedAt: AWSDateTime
+}
+
+# Week 7: Calendar Event Type (simplified for calendar views)
+type CalendarEvent {
+  id: ID!
+  title: String!
+  start: AWSDateTime!
+  end: AWSDateTime!
+  location: String!
+  availableSeats: Int!
+  category: EventCategory!
+  status: EventStatus!
+}
+
+# Week 7: Search Result Type
+type SearchResult {
+  items: [Event!]!
+  total: Int!
+  nextToken: String
+  facets: SearchFacets
+}
+
+# Week 7: Search Facets Type
+type SearchFacets {
+  categories: [FacetCount!]!
+  locations: [FacetCount!]!
+  tags: [FacetCount!]!
+}
+
+# Week 7: Facet Count Type
+type FacetCount {
+  value: String!
+  count: Int!
 }
 
 # Location Type
@@ -100,6 +139,16 @@ type Query {
     nextToken: String
   ): EventConnection!
   searchEvents(query: String!): [Event!]!
+  
+  # Week 7: Advanced Search and Discovery
+  advancedSearchEvents(input: SearchQueryInput!): SearchResult!
+    @aws_cognito_user_pools
+  
+  getCalendarEvents(input: CalendarEventsInput!): [CalendarEvent!]!
+    @aws_cognito_user_pools
+  
+  getEventBySlug(slug: String!): Event
+    @aws_cognito_user_pools
   
   # Users
   getUser(id: ID!): User
@@ -185,6 +234,45 @@ input EventFilter {
   status: EventStatus
   startDateAfter: AWSDateTime
   startDateBefore: AWSDateTime
+}
+
+# Week 7: Advanced Search Input Types
+input SearchQueryInput {
+  query: String!
+  filters: SearchFilters
+  pagination: PaginationInput
+  sort: SortInput
+}
+
+input SearchFilters {
+  categories: [EventCategory!]
+  locations: [String!]
+  startDateAfter: AWSDateTime
+  startDateBefore: AWSDateTime
+  hasAvailableSeats: Boolean
+  tags: [String!]
+}
+
+input PaginationInput {
+  limit: Int
+  nextToken: String
+}
+
+input SortInput {
+  field: String!
+  order: String!
+}
+
+input CalendarEventsInput {
+  year: Int!
+  month: Int!
+  view: String
+  filters: CalendarFiltersInput
+}
+
+input CalendarFiltersInput {
+  categories: [EventCategory!]
+  locations: [String!]
 }
 
 # Connection Types

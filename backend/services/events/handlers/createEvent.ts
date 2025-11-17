@@ -10,9 +10,18 @@ import {
   putEvent,
   createVenueBooking,
   checkVenueConflict,
+  createSlugLookup,
 } from '../../../shared/utils/dynamodb.utils';
 import { publishEventCreated } from '../../../shared/utils/eventbridge.utils';
 import { getUserIdFromIdentity } from '../../../shared/types/appsync.types';
+import {
+  generateSlug,
+  generateShareableUrl,
+  generateSearchTerms,
+  generateLocationPK,
+  generateLocationSK,
+  calculateAvailableSeats,
+} from '../../../shared/utils/slug.utils';
 
 /**
  * Lambda handler for createEvent mutation
@@ -76,6 +85,19 @@ export async function handler(
     const eventId = generateEventId();
     const timestamp = new Date().toISOString();
 
+    // Week 7: Generate search and discovery fields
+    const slug = generateSlug(input.title, input.startDateTime);
+    const shareableUrl = generateShareableUrl(slug);
+    const searchTerms = generateSearchTerms({
+      title: input.title,
+      description: input.description,
+      location: input.location,
+      tags: input.tags || [],
+    });
+    const GSI3PK = generateLocationPK(input.location.building);
+    const GSI3SK = generateLocationSK(input.location.room, eventId);
+    const availableSeats = calculateAvailableSeats(input.capacity, 0);
+
     const newEvent: Event = {
       // DynamoDB keys
       PK: `EVENT#${eventId}`,
@@ -84,6 +106,8 @@ export async function handler(
       GSI1SK: input.startDateTime,
       GSI2PK: `EVENT#CATEGORY#${input.category}`,
       GSI2SK: input.startDateTime,
+      GSI3PK, // Week 7: Location-based queries
+      GSI3SK, // Week 7: Location-based queries
       // Domain fields
       id: eventId,
       title: input.title,
@@ -100,12 +124,23 @@ export async function handler(
       tags: input.tags || [],
       imageUrl: input.imageUrl,
       version: 1,
+      // Week 7: Search and discovery fields
+      slug,
+      shareableUrl,
+      searchTerms,
+      availableSeats,
+      waitlistAvailable: false, // No waitlist needed when event is empty
       createdAt: timestamp,
       updatedAt: timestamp,
     };
 
     // 5. Save event to DynamoDB
     const savedEvent = await putEvent(newEvent);
+
+    // 5.5. Week 7: Create slug lookup item
+    if (slug) {
+      await createSlugLookup(slug, eventId);
+    }
 
     // 6. Create venue booking
     if (input.location.building && input.location.room) {

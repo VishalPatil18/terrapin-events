@@ -66,7 +66,11 @@ resources:
             tags: [String!]
             imageUrl: String
             createdAt: AWSDateTime!
-            updatedAt: AWSDateTime!
+            updatedAt: AWSDateTime!            
+            slug: String
+            shareableUrl: String
+            availableSeats: Int
+            waitlistAvailable: Boolean
           }
 
           # User Type
@@ -90,6 +94,35 @@ resources:
             waitlistPosition: Int
             registeredAt: AWSDateTime!
             attendedAt: AWSDateTime
+            }
+            
+          type CalendarEvent {
+            id: ID!
+            title: String!
+            start: AWSDateTime!
+            end: AWSDateTime!
+            location: String!
+            availableSeats: Int!
+            category: EventCategory!
+            status: EventStatus!
+          }
+            
+          type SearchResult {
+            items: [Event!]!
+            total: Int!
+            nextToken: String
+            facets: SearchFacets
+          }
+            
+          type SearchFacets {
+            categories: [FacetCount!]!
+            locations: [FacetCount!]!
+            tags: [FacetCount!]!
+          }
+            
+          type FacetCount {
+            value: String!
+            count: Int!
           }
 
           # Location Type
@@ -145,6 +178,17 @@ resources:
             getEvent(id: ID!): Event
             listEvents(filter: EventFilter, limit: Int, nextToken: String): EventConnection!
             searchEvents(query: String!): [Event!]!
+            
+            advancedSearchEvents(input: SearchQueryInput!): SearchResult!
+              @aws_cognito_user_pools
+            
+            getCalendarEvents(input: CalendarEventsInput!): [CalendarEvent!]!
+              @aws_cognito_user_pools
+            
+            getEventBySlug(slug: String!): Event
+              @aws_cognito_user_pools
+            
+            # Users
             getUser(id: ID!): User
             getCurrentUser: User!
             getRegistration(id: ID!): Registration
@@ -219,7 +263,45 @@ resources:
             startDateAfter: AWSDateTime
             startDateBefore: AWSDateTime
           }
-
+            
+          input SearchQueryInput {
+            query: String!
+            filters: SearchFilters
+            pagination: PaginationInput
+            sort: SortInput
+          }
+              
+          input SearchFilters {
+            categories: [EventCategory!]
+            locations: [String!]
+            startDateAfter: AWSDateTime
+            startDateBefore: AWSDateTime
+            hasAvailableSeats: Boolean
+            tags: [String!]
+          }
+              
+          input PaginationInput {
+            limit: Int
+            nextToken: String
+          }
+              
+          input SortInput {
+            field: String!
+            order: String!
+          }
+              
+          input CalendarEventsInput {
+            year: Int!
+            month: Int!
+            view: String
+            filters: CalendarFiltersInput
+          }
+              
+          input CalendarFiltersInput {
+            categories: [EventCategory!]
+            locations: [String!]
+          }
+            
           # Connection Types
           type EventConnection {
             items: [Event!]!
