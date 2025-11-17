@@ -189,6 +189,7 @@ async function queryByLocation(
 ): Promise<Event[]> {
   const expressionAttributeValues: Record<string, any> = {
     ':pk': `EVENT#LOCATION#${building}`,
+    ':status': EventStatus.PUBLISHED,
   };
 
   const result = await client.send(
@@ -196,15 +197,11 @@ async function queryByLocation(
       TableName: TABLE_NAME,
       IndexName: 'GSI3',
       KeyConditionExpression: 'GSI3PK = :pk',
-      ExpressionAttributeValues: expressionAttributeValues,
       FilterExpression: '#status = :status',
       ExpressionAttributeNames: {
         '#status': 'status',
       },
-      ExpressionAttributeValues: {
-        ...expressionAttributeValues,
-        ':status': EventStatus.PUBLISHED,
-      },
+      ExpressionAttributeValues: expressionAttributeValues,
     })
   );
 

@@ -1,6 +1,6 @@
 import { AppSyncResolverEvent, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetItemCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Event } from '../../../shared/types/event.types';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -59,7 +59,7 @@ export async function handler(
 
     // Step 2: Get full event details
     const eventResult = await client.send(
-      new GetItemCommand({
+      new GetCommand({
         TableName: TABLE_NAME,
         Key: {
           PK: `EVENT#${eventId}`,
