@@ -42,7 +42,24 @@ export async function searchEvents(query: SearchQuery): Promise<SearchResult> {
     const result = response.data.searchEvents;
 
     return {
-      items: result.items,
+      items: result.items.map(item => ({
+        id: item.eventId,
+        title: item.title,
+        description: item.description,
+        startDateTime: item.startDateTime,
+        endDateTime: item.endDateTime,
+        location: item.location,
+        category: item.category,
+        capacity: item.totalCapacity,
+        registeredCount: item.totalCapacity - item.availableSeats,
+        waitlistCount: 0, // Default for search results
+        organizerId: item.organizerName, // Map organizerName to organizerId temporarily
+        status: item.status,
+        tags: [], // Default for search results
+        imageUrl: "",
+        createdAt: "", // Default timestamp
+        updatedAt: "", // Default timestamp
+      })),
       total: result.total,
       nextToken: result.nextToken,
       took: result.took,
@@ -79,7 +96,24 @@ export async function getCalendarEvents(
       },
     })) as { data: CalendarEventsResult };
 
-    return response.data.getCalendarEvents;
+    return response.data.getCalendarEvents.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: '', // Not available in calendar response
+      startDateTime: item.startDateTime,
+      endDateTime: item.endDateTime,
+      location: item.location,
+      category: item.category,
+      capacity: 0, // Not available in calendar response
+      registeredCount: 0, // Calculate from availableSeats if needed
+      waitlistCount: 0, // Not available in calendar response
+      organizerId: '', // Not available in calendar response
+      status: item.status,
+      tags: [], // Not available in calendar response
+      imageUrl: "",
+      createdAt: "",
+      updatedAt: "",
+    }));
   } catch (error) {
     console.error('Calendar API error:', error);
     throw new Error('Failed to fetch calendar events');
@@ -96,7 +130,27 @@ export async function getEventBySlug(slug: string): Promise<EventSearchItem | nu
       variables: { slug },
     })) as { data: GetEventBySlugResult };
 
-    return response.data.getEventBySlug;
+    const event = response.data.getEventBySlug;
+    if (!event) return null;
+    
+    return {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      startDateTime: event.startDateTime,
+      endDateTime: event.endDateTime,
+      location: event.location,
+      category: event.category,
+      capacity: event.totalCapacity,
+      registeredCount: event.totalCapacity - event.availableSeats,
+      waitlistCount: 0, // Default for slug lookup
+      organizerId: event.organizerName, // Map organizerName to organizerId
+      status: event.status,
+      tags: [], // Default for slug lookup
+      imageUrl: "",
+      createdAt: "", // Default timestamp
+      updatedAt: "", // Default timestamp
+    };
   } catch (error) {
     console.error('Get event by slug error:', error);
     return null;

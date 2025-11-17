@@ -2,6 +2,7 @@
  * Search and Filter Type Definitions
  * Week 8 - Event Discovery Features
  */
+import { EventLocation, EventStatus, EventCategory } from '@/types/event.types';
 
 export interface SearchQuery {
   query?: string;
@@ -34,21 +35,22 @@ export interface PaginationInput {
 }
 
 export interface EventSearchItem {
-  eventId: string;
-  title: string;
-  description: string;
-  startDateTime: string;
-  endDateTime: string;
-  location: string;
-  room?: string;
-  category: string;
-  organizerName: string;
-  availableSeats: number;
-  totalCapacity: number;
-  status: string;
-  imageUrl?: string;
-  shareableUrl: string;
-  relevanceScore?: number;
+    id: string;
+    title: string;
+    description: string;
+    startDateTime: string;
+    endDateTime: string;
+    location: EventLocation;
+    category: EventCategory;
+    capacity: number;
+    registeredCount: number;
+    waitlistCount: number;
+    organizerId: string;
+    status: EventStatus;
+    tags: string[];
+    imageUrl?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface SearchResult {
@@ -78,10 +80,10 @@ export interface CalendarEvent {
   end: Date;
   resource?: {
     eventId: string;
-    location: string;
+    location: EventLocation;
     availableSeats: number;
-    category: string;
-    status: string;
+    category: EventCategory;
+    status: EventStatus;
   };
 }
 

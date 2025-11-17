@@ -17,6 +17,7 @@ import { DateRangePicker } from '@/components/events/DateRangePicker';
 import { Button } from '@/components/ui/Button';
 import { useEventSearch } from '@/hooks/events/useEventSearch';
 import type { FilterOption } from '@/types/search.types';
+import { EventCategory, EventStatus } from '@/types/event.types';
 
 export default function SearchPage() {
   const router = useRouter();
@@ -239,23 +240,30 @@ export default function SearchPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {results.items.map((event) => (
-                    <div key={event.eventId} onClick={() => handleEventClick(event.eventId)}>
+                    <div key={event.id} onClick={() => handleEventClick(event.id)}>
                       <EventCard
                         event={{
-                          id: event.eventId,
+                          id: event.id,
                           title: event.title,
                           description: event.description,
                           startDateTime: event.startDateTime,
                           endDateTime: event.endDateTime,
                           location: {
-                            building: event.location,
-                            room: event.room,
+                            name: event.location.name,
+                            building: event.location.building,
+                            room: event.location.room,
+                            address: event.location.address, // Use building name as fallback address
                           },
-                          category: event.category,
-                          capacity: event.totalCapacity,
-                          registeredCount: event.totalCapacity - event.availableSeats,
-                          status: event.status as any,
+                          category: event.category as EventCategory,
+                          capacity: event.capacity,
+                          registeredCount: event.registeredCount,
+                          status: event.status as EventStatus,
                           imageUrl: event.imageUrl,
+                          waitlistCount:0,
+                          organizerId:"",
+                          tags:[],
+                          createdAt:"",
+                          updatedAt:""
                         }}
                       />
                     </div>

@@ -33,14 +33,14 @@ export function useCalendarEvents(): UseCalendarEventsReturn {
       
       // Transform to Calendar format
       const calendarEvents: CalendarEvent[] = result.map((event) => ({
-        id: event.eventId,
+        id: event.id,
         title: event.title,
         start: new Date(event.startDateTime),
         end: new Date(event.endDateTime),
         resource: {
-          eventId: event.eventId,
+          eventId: event.id,
           location: event.location,
-          availableSeats: event.availableSeats,
+          availableSeats: event.capacity - event.registeredCount,
           category: event.category,
           status: event.status,
         },

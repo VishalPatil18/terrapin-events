@@ -2,25 +2,26 @@
  * Search GraphQL Queries
  * Week 8 - Event Discovery & Search
  */
+import { EventLocation, EventStatus, EventCategory } from '@/types/event.types';
 
 // Search Event Item Fragment
 export const SEARCH_EVENT_ITEM_FRAGMENT = `
   fragment SearchEventItem on EventSearchItem {
-    eventId
+    id
     title
     description
     startDateTime
     endDateTime
-    location
-    room
     category
-    organizerName
-    availableSeats
-    totalCapacity
+    capacity
+    registeredCount
+    waitlistCount
+    organizerId
     status
+    tags
     imageUrl
-    shareableUrl
-    relevanceScore
+    createdAt
+    updatedAt
   }
 `;
 
@@ -137,13 +138,13 @@ export interface SearchEventsResult {
       description: string;
       startDateTime: string;
       endDateTime: string;
-      location: string;
+      location: EventLocation;
       room?: string;
-      category: string;
+      category: EventCategory;
       organizerName: string;
       availableSeats: number;
       totalCapacity: number;
-      status: string;
+      status: EventStatus;
       imageUrl?: string;
       shareableUrl: string;
       relevanceScore?: number;
@@ -171,31 +172,31 @@ export interface CalendarEventsInput {
 
 export interface CalendarEventsResult {
   getCalendarEvents: Array<{
-    eventId: string;
+    id: string;
     title: string;
     startDateTime: string;
     endDateTime: string;
-    location: string;
-    category: string;
+    location: EventLocation;
+    category: EventCategory;
     availableSeats: number;
-    status: string;
+    status: EventStatus;
   }>;
 }
 
 export interface GetEventBySlugResult {
   getEventBySlug: {
-    eventId: string;
+    id: string;
     title: string;
     description: string;
     startDateTime: string;
     endDateTime: string;
-    location: string;
+    location: EventLocation;
     room?: string;
-    category: string;
+    category: EventCategory;
     organizerName: string;
     availableSeats: number;
     totalCapacity: number;
-    status: string;
+    status: EventStatus;
     imageUrl?: string;
     shareableUrl: string;
   } | null;
