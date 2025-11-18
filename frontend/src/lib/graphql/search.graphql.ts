@@ -1,17 +1,25 @@
 /**
  * Search GraphQL Queries
- * Week 8 - Event Discovery & Search
+ * Week 7-8 - Event Discovery & Advanced Search
+ * 
+ * IMPORTANT: These queries match the backend GraphQL schema exactly
  */
-import { EventLocation, EventStatus, EventCategory } from '@/types/event.types';
 
-// Search Event Item Fragment
-export const SEARCH_EVENT_ITEM_FRAGMENT = `
-  fragment SearchEventItem on EventSearchItem {
+// ==================== FRAGMENTS ====================
+
+export const EVENT_FRAGMENT = `
+  fragment EventFields on Event {
     id
     title
     description
     startDateTime
     endDateTime
+    location {
+      name
+      building
+      room
+      address
+    }
     category
     capacity
     registeredCount
@@ -20,166 +28,188 @@ export const SEARCH_EVENT_ITEM_FRAGMENT = `
     status
     tags
     imageUrl
+    slug
+    shareableUrl
+    availableSeats
+    waitlistAvailable
     createdAt
     updatedAt
   }
 `;
 
-// Search Aggregations Fragment
-export const SEARCH_AGGREGATIONS_FRAGMENT = `
-  fragment SearchAggregations on SearchAggregations {
-    categories {
-      key
-      count
-    }
-    locations {
-      key
-      count
-    }
-    dateRanges {
-      key
-      count
-    }
-  }
-`;
-
-// Search Events Query
-export const SEARCH_EVENTS = `
-  ${SEARCH_EVENT_ITEM_FRAGMENT}
-  ${SEARCH_AGGREGATIONS_FRAGMENT}
-  
-  query SearchEvents($input: SearchQueryInput!) {
-    searchEvents(input: $input) {
-      items {
-        ...SearchEventItem
-      }
-      total
-      nextToken
-      took
-      aggregations {
-        ...SearchAggregations
-      }
-    }
-  }
-`;
-
-// Calendar Event Fragment
 export const CALENDAR_EVENT_FRAGMENT = `
-  fragment CalendarEventItem on CalendarEvent {
+  fragment CalendarEventFields on CalendarEvent {
     id
     title
     start
     end
-    resource {
-      eventId
-      location
-      availableSeats
-      category
-      status
+    location
+    availableSeats
+    category
+    status
+  }
+`;
+
+export const SEARCH_FACETS_FRAGMENT = `
+  fragment SearchFacetsFields on SearchFacets {
+    categories {
+      value
+      count
+    }
+    locations {
+      value
+      count
+    }
+    tags {
+      value
+      count
     }
   }
 `;
 
-// Get Calendar Events Query
+// ==================== QUERIES ====================
+
+/**
+ * Advanced Search Events Query
+ * Backend resolver: advancedSearchEvents
+ */
+export const ADVANCED_SEARCH_EVENTS = `
+  ${EVENT_FRAGMENT}
+  ${SEARCH_FACETS_FRAGMENT}
+  
+  query AdvancedSearchEvents($input: SearchQueryInput!) {
+    advancedSearchEvents(input: $input) {
+      items {
+        ...EventFields
+      }
+      total
+      nextToken
+      facets {
+        ...SearchFacetsFields
+      }
+    }
+  }
+`;
+
+/**
+ * Get Calendar Events Query
+ * Backend resolver: getCalendarEvents
+ */
 export const GET_CALENDAR_EVENTS = `
+  ${CALENDAR_EVENT_FRAGMENT}
+  
   query GetCalendarEvents($input: CalendarEventsInput!) {
     getCalendarEvents(input: $input) {
-      eventId
-      title
-      startDateTime
-      endDateTime
-      location
-      category
-      availableSeats
-      status
+      ...CalendarEventFields
     }
   }
 `;
 
-// Get Event By Slug Query
+/**
+ * Get Event By Slug Query
+ * Backend resolver: getEventBySlug
+ */
 export const GET_EVENT_BY_SLUG = `
-  ${SEARCH_EVENT_ITEM_FRAGMENT}
+  ${EVENT_FRAGMENT}
   
   query GetEventBySlug($slug: String!) {
     getEventBySlug(slug: $slug) {
-      ...SearchEventItem
+      ...EventFields
     }
   }
 `;
 
-// Type definitions for use with GraphQL
+// ==================== TYPE DEFINITIONS ====================
+
 export interface SearchQueryInput {
-  query?: string;
-  filters?: {
-    categories?: string[];
-    locations?: string[];
-    availability?: 'ALL' | 'AVAILABLE' | 'WAITLIST';
-    organizers?: string[];
-  };
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-  sort?: {
-    field: 'startDateTime' | 'title' | 'availableSeats';
-    order: 'asc' | 'desc';
-  };
-  pagination?: {
-    limit?: number;
-    nextToken?: string;
-  };
+  query: string;
+  filters?: SearchFilters;
+  pagination?: PaginationInput;
+  sort?: SortInput;
 }
 
-export interface SearchEventsResult {
-  searchEvents: {
-    items: Array<{
-      eventId: string;
-      title: string;
-      description: string;
-      startDateTime: string;
-      endDateTime: string;
-      location: EventLocation;
-      room?: string;
-      category: EventCategory;
-      organizerName: string;
-      availableSeats: number;
-      totalCapacity: number;
-      status: EventStatus;
-      imageUrl?: string;
-      shareableUrl: string;
-      relevanceScore?: number;
-    }>;
-    total: number;
-    nextToken?: string;
-    took: number;
-    aggregations?: {
-      categories: Array<{ key: string; count: number }>;
-      locations: Array<{ key: string; count: number }>;
-      dateRanges: Array<{ key: string; count: number }>;
-    };
-  };
+export interface SearchFilters {
+  categories?: string[];
+  locations?: string[];
+  startDateAfter?: string;
+  startDateBefore?: string;
+  hasAvailableSeats?: boolean;
+  tags?: string[];
+}
+
+export interface PaginationInput {
+  limit?: number;
+  nextToken?: string;
+}
+
+export interface SortInput {
+  field: string;
+  order: string;
 }
 
 export interface CalendarEventsInput {
   year: number;
   month: number;
   view?: 'month' | 'week' | 'day' | 'agenda';
-  filters?: {
-    categories?: string[];
-    locations?: string[];
+  filters?: CalendarFiltersInput;
+}
+
+export interface CalendarFiltersInput {
+  categories?: string[];
+  locations?: string[];
+}
+
+// ==================== RESULT TYPES ====================
+
+export interface AdvancedSearchEventsResult {
+  advancedSearchEvents: {
+    items: Array<{
+      id: string;
+      title: string;
+      description: string;
+      startDateTime: string;
+      endDateTime: string;
+      location: {
+        name: string;
+        building: string;
+        room?: string;
+        address: string;
+      };
+      category: string;
+      capacity: number;
+      registeredCount: number;
+      waitlistCount: number;
+      organizerId: string;
+      status: string;
+      tags: string[];
+      imageUrl?: string;
+      slug?: string;
+      shareableUrl?: string;
+      availableSeats?: number;
+      waitlistAvailable?: boolean;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    total: number;
+    nextToken?: string;
+    facets?: {
+      categories: Array<{ value: string; count: number }>;
+      locations: Array<{ value: string; count: number }>;
+      tags: Array<{ value: string; count: number }>;
+    };
   };
 }
 
-export interface CalendarEventsResult {
+export interface GetCalendarEventsResult {
   getCalendarEvents: Array<{
     id: string;
     title: string;
-    startDateTime: string;
-    endDateTime: string;
-    location: EventLocation;
-    category: EventCategory;
+    start: string;
+    end: string;
+    location: string;
     availableSeats: number;
-    status: EventStatus;
+    category: string;
+    status: string;
   }>;
 }
 
@@ -190,14 +220,25 @@ export interface GetEventBySlugResult {
     description: string;
     startDateTime: string;
     endDateTime: string;
-    location: EventLocation;
-    room?: string;
-    category: EventCategory;
-    organizerName: string;
-    availableSeats: number;
-    totalCapacity: number;
-    status: EventStatus;
+    location: {
+      name: string;
+      building: string;
+      room?: string;
+      address: string;
+    };
+    category: string;
+    capacity: number;
+    registeredCount: number;
+    waitlistCount: number;
+    organizerId: string;
+    status: string;
+    tags: string[];
     imageUrl?: string;
-    shareableUrl: string;
+    slug?: string;
+    shareableUrl?: string;
+    availableSeats?: number;
+    waitlistAvailable?: boolean;
+    createdAt: string;
+    updatedAt: string;
   } | null;
 }
