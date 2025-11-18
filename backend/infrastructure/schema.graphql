@@ -41,9 +41,11 @@ type Registration {
   id: ID!
   userId: ID!
   eventId: ID!
+  event: Event  # Related event details
   status: RegistrationStatus!
   qrCode: String!
   waitlistPosition: Int
+  promotionDeadline: AWSDateTime
   registeredAt: AWSDateTime!
   attendedAt: AWSDateTime
 }
@@ -168,7 +170,7 @@ type Mutation {
   publishEvent(id: ID!): Event!
   
   # Registrations
-  registerForEvent(eventId: ID!): Registration!
+  registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
   cancelRegistration(id: ID!): Registration!
   checkInAttendee(registrationId: ID!): Registration!
   

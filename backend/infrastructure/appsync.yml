@@ -89,9 +89,11 @@ resources:
             id: ID!
             userId: ID!
             eventId: ID!
+            event: Event
             status: RegistrationStatus!
             qrCode: String!
             waitlistPosition: Int
+            promotionDeadline: AWSDateTime
             registeredAt: AWSDateTime!
             attendedAt: AWSDateTime
             }
@@ -201,7 +203,7 @@ resources:
             updateEvent(id: ID!, input: UpdateEventInput!): Event!
             deleteEvent(id: ID!): Event!
             publishEvent(id: ID!): Event!
-            registerForEvent(eventId: ID!): Registration!
+            registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
             cancelRegistration(id: ID!): Registration!
             checkInAttendee(registrationId: ID!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
@@ -438,6 +440,27 @@ resources:
             "operation": "GetItem",
             "key": {
               "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.identity.sub"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+    # Field Resolver: Registration.event
+    # Resolves the event field when querying a registration
+    RegistrationEventResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Registration
+        FieldName: event
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("EVENT#$ctx.source.eventId"),
               "SK": $util.dynamodb.toDynamoDBJson("METADATA")
             }
           }

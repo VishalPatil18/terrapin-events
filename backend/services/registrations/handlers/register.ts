@@ -26,16 +26,17 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
  * Lambda handler for registerForEvent mutation
  */
 export async function handler(
-  event: AppSyncResolverEvent<{ input: RegisterForEventInput }>,
+  event: AppSyncResolverEvent<{ eventId: string; idempotencyKey?: string }>,
   context: Context
 ): Promise<Registration> {
   console.log('RegisterForEvent handler invoked', {
     requestId: context.awsRequestId,
-    input: event.arguments.input,
+    eventId: event.arguments.eventId,
+    hasIdempotencyKey: !!event.arguments.idempotencyKey,
   });
 
   try {
-    const { eventId } = event.arguments.input;
+    const { eventId, idempotencyKey } = event.arguments;
 
     // 1. Get user ID from AppSync identity
     const userId = getUserIdFromIdentity(event.identity);
@@ -51,7 +52,41 @@ export async function handler(
     const userEmail = identity.claims?.email || identity.username;
     const userName = identity.claims?.name || identity.claims?.['cognito:username'] || 'User';
 
-    // 2. Check rate limit (5 registrations per minute)
+    // 2. Check idempotency - if key provided, check if we've processed this request before
+    if (idempotencyKey) {
+      const idempotencyRecord = await docClient.send(
+        new GetCommand({
+          TableName: TABLE_NAME,
+          Key: {
+            PK: `IDEMPOTENCY#${idempotencyKey}`,
+            SK: 'METADATA',
+          },
+        })
+      );
+
+      // If idempotency record exists, return cached result
+      if (idempotencyRecord.Item) {
+        console.log(`Idempotency key ${idempotencyKey} already processed, returning cached result`);
+        
+        // Get the original registration
+        const cachedRegistrationId = idempotencyRecord.Item.registrationId;
+        const cachedRegistration = await docClient.send(
+          new GetCommand({
+            TableName: TABLE_NAME,
+            Key: {
+              PK: `USER#${userId}`,
+              SK: `REGISTRATION#${cachedRegistrationId}`,
+            },
+          })
+        );
+        
+        if (cachedRegistration.Item) {
+          return cachedRegistration.Item as Registration;
+        }
+      }
+    }
+
+    // 3. Check rate limit (5 registrations per minute)
     const rateLimitCheck = await checkRateLimit(userId, 'REGISTER');
     if (!rateLimitCheck.allowed) {
       throw new Error(JSON.stringify({
@@ -164,6 +199,25 @@ export async function handler(
       // Atomically increment registered count
       await atomicIncrementRegistered(eventId, 1);
 
+      // Save idempotency record if key was provided
+      if (idempotencyKey) {
+        const ttl = Math.floor(Date.now() / 1000) + (24 * 60 * 60); // 24 hours from now
+        await docClient.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: {
+              PK: `IDEMPOTENCY#${idempotencyKey}`,
+              SK: 'METADATA',
+              registrationId,
+              userId,
+              eventId,
+              processedAt: timestamp,
+              ttl, // DynamoDB will auto-delete after 24 hours
+            },
+          })
+        );
+      }
+
       // Publish RegistrationCreated event
       await eventBridgeClient.send(
         new PutEventsCommand({
@@ -222,6 +276,25 @@ export async function handler(
 
       // Add to waitlist
       await addToWaitlist(registrationId, userId, userEmail, userName, eventId, position);
+
+      // Save idempotency record if key was provided
+      if (idempotencyKey) {
+        const ttl = Math.floor(Date.now() / 1000) + (24 * 60 * 60); // 24 hours from now
+        await docClient.send(
+          new PutCommand({
+            TableName: TABLE_NAME,
+            Item: {
+              PK: `IDEMPOTENCY#${idempotencyKey}`,
+              SK: 'METADATA',
+              registrationId,
+              userId,
+              eventId,
+              processedAt: timestamp,
+              ttl, // DynamoDB will auto-delete after 24 hours
+            },
+          })
+        );
+      }
 
       // Publish WaitlistAdded event
       await eventBridgeClient.send(

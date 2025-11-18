@@ -43,6 +43,7 @@ export interface Registration {
 // GraphQL Input Types
 export interface RegisterForEventInput {
   eventId: string;
+  idempotencyKey?: string;  // Optional - for preventing duplicate registrations
 }
 
 export interface CancelRegistrationInput {
