@@ -6,8 +6,9 @@
 import { AppSyncResolverEvent, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { Registration } from '../../../shared/types/registration.types';
+import { Registration, GraphQLRegistration } from '../../../shared/types/registration.types';
 import { getUserIdFromIdentity } from '../../../shared/types/appsync.types';
+import { toGraphQLRegistration } from './helpers';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -20,7 +21,7 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME!;
 export async function handler(
   event: AppSyncResolverEvent<{ id: string }>,
   context: Context
-): Promise<Registration | null> {
+): Promise<GraphQLRegistration | null> {
   console.log('GetRegistration handler invoked', {
     requestId: context.awsRequestId,
     registrationId: event.arguments.id,
@@ -68,7 +69,8 @@ export async function handler(
 
     console.log(`Found registration ${registrationId} for user ${userId}`);
 
-    return registration;
+    // Return GraphQL-compatible format
+    return toGraphQLRegistration(registration);
 
   } catch (error: any) {
     console.error('Get registration error:', error);

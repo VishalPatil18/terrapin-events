@@ -7,11 +7,12 @@ import { AppSyncResolverEvent, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { PutEventsCommand, EventBridgeClient } from '@aws-sdk/client-eventbridge';
-import { Registration, RegistrationStatus, CancelRegistrationInput } from '../../../shared/types/registration.types';
+import { Registration, GraphQLRegistration, RegistrationStatus, CancelRegistrationInput } from '../../../shared/types/registration.types';
 import { getUserIdFromIdentity } from '../../../shared/types/appsync.types';
 import { atomicIncrementRegistered } from '../business-logic/capacity-check';
 import { removeFromWaitlist } from '../business-logic/waitlist-manager';
 import { checkRateLimit } from '../business-logic/rate-limiter';
+import { toGraphQLRegistration } from './helpers';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -26,7 +27,7 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
 export async function handler(
   event: AppSyncResolverEvent<{ input: CancelRegistrationInput }>,
   context: Context
-): Promise<Registration> {
+): Promise<GraphQLRegistration> {
   console.log('CancelRegistration handler invoked', {
     requestId: context.awsRequestId,
     input: event.arguments.input,
@@ -140,12 +141,15 @@ export async function handler(
         })
       );
 
-      return {
+      console.log(`Waitlist registration ${registrationId} cancelled`);
+
+      // Return GraphQL-compatible format
+      return toGraphQLRegistration({
         ...registration,
         status: RegistrationStatus.CANCELLED,
         cancelledAt: timestamp,
         updatedAt: timestamp,
-      };
+      });
 
     } else {
       // REGISTERED or PROMOTION_PENDING USER CANCELLING
@@ -215,12 +219,13 @@ export async function handler(
 
       console.log(`Registration ${registrationId} cancelled, waitlist promotion triggered`);
 
-      return {
+      // Return GraphQL-compatible format
+      return toGraphQLRegistration({
         ...registration,
         status: RegistrationStatus.CANCELLED,
         cancelledAt: timestamp,
         updatedAt: timestamp,
-      };
+      });
     }
 
   } catch (error: any) {

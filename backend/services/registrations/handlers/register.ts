@@ -8,12 +8,13 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { PutEventsCommand, EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { nanoid } from 'nanoid';
-import { Registration, RegistrationStatus, RegisterForEventInput } from '../../../shared/types/registration.types';
+import { Registration, GraphQLRegistration, RegistrationStatus, RegisterForEventInput } from '../../../shared/types/registration.types';
 import { getUserIdFromIdentity } from '../../../shared/types/appsync.types';
 import { checkEventCapacity, isUserRegistered, atomicIncrementRegistered, getNextWaitlistPosition } from '../business-logic/capacity-check';
 import { generateQRCode } from '../business-logic/qr-generator';
 import { addToWaitlist } from '../business-logic/waitlist-manager';
 import { checkRateLimit } from '../business-logic/rate-limiter';
+import { toGraphQLRegistration } from './helpers';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -28,7 +29,7 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
 export async function handler(
   event: AppSyncResolverEvent<{ eventId: string; idempotencyKey?: string }>,
   context: Context
-): Promise<Registration> {
+): Promise<GraphQLRegistration> {
   console.log('RegisterForEvent handler invoked', {
     requestId: context.awsRequestId,
     eventId: event.arguments.eventId,
@@ -81,7 +82,7 @@ export async function handler(
         );
         
         if (cachedRegistration.Item) {
-          return cachedRegistration.Item as Registration;
+          return toGraphQLRegistration(cachedRegistration.Item);
         }
       }
     }
@@ -240,7 +241,9 @@ export async function handler(
       );
 
       console.log(`User ${userId} successfully registered for event ${eventId}`);
-      return registration;
+      
+      // Return only GraphQL-compatible fields
+      return toGraphQLRegistration(registration);
 
     } else {
       // 8. Event is full, add to waitlist
@@ -318,7 +321,9 @@ export async function handler(
       );
 
       console.log(`User ${userId} added to waitlist position ${position} for event ${eventId}`);
-      return registration;
+      
+      // Return only GraphQL-compatible fields
+      return toGraphQLRegistration(registration);
     }
 
   } catch (error: any) {

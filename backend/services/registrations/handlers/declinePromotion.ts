@@ -9,9 +9,10 @@ import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { PutEventsCommand, EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { marshall } from '@aws-sdk/util-dynamodb';
-import { Registration, RegistrationStatus } from '../../../shared/types/registration.types';
+import { Registration, GraphQLRegistration, RegistrationStatus } from '../../../shared/types/registration.types';
 import { getUserIdFromIdentity } from '../../../shared/types/appsync.types';
 import { promoteFromWaitlist } from '../business-logic/waitlist-manager';
+import { toGraphQLRegistration } from './helpers';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -27,7 +28,7 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
 export async function handler(
   event: AppSyncResolverEvent<{ id: string }>,
   context: Context
-): Promise<Registration> {
+): Promise<GraphQLRegistration> {
   console.log('DeclinePromotion handler invoked', {
     requestId: context.awsRequestId,
     registrationId: event.arguments.id,
@@ -135,15 +136,13 @@ export async function handler(
 
     console.log(`Promotion declined for registration ${registrationId}`);
 
-    // 8. Return updated registration
-    const updatedRegistration: Registration = {
+    // 8. Return updated registration in GraphQL format
+    return toGraphQLRegistration({
       ...registration,
       status: RegistrationStatus.CANCELLED,
       updatedAt: timestamp,
-      promotionDeadline: undefined, // Remove deadline
-    };
-
-    return updatedRegistration;
+      promotionDeadline: undefined,
+    });
 
   } catch (error: any) {
     console.error('Decline promotion error:', error);
