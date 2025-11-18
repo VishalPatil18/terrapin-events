@@ -194,7 +194,7 @@ export async function getEventsByCategory(
 ): Promise<Event[]> {
   const result = await listEvents(
     {
-      category: category as any,
+      category: category as import('@/types/event.types').EventCategory,
     },
     limit
   );
@@ -207,7 +207,7 @@ export async function getEventsByCategory(
 export async function getPublishedEvents(limit = 20): Promise<Event[]> {
   const result = await listEvents(
     {
-      status: 'PUBLISHED' as any,
+      status: 'PUBLISHED' as import('@/types/event.types').EventStatus,
     },
     limit
   );

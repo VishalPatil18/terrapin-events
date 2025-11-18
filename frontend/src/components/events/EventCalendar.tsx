@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Calendar, momentLocalizer, View } from 'react-big-calendar';
 import moment from 'moment';
 import type { CalendarEvent } from '@/types/search.types';
@@ -66,7 +66,12 @@ export function EventCalendar({
   /**
    * Custom toolbar component
    */
-  const CustomToolbar = (toolbar: any) => {
+  const CustomToolbar = (toolbar: {
+    date: Date;
+    view: View;
+    onNavigate: (action: 'PREV' | 'NEXT' | 'TODAY') => void;
+    onView: (view: View) => void;
+  }) => {
     const goToBack = () => {
       toolbar.onNavigate('PREV');
     };

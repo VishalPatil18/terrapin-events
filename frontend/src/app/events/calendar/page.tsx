@@ -44,7 +44,7 @@ export default function CalendarPage() {
   }, [currentMonth, filters, fetchEvents]);
 
   const handleNavigate = useCallback(
-    (date: Date, view: View) => {
+    (date: Date, _view: View) => {
       setCurrentMonth(date);
     },
     [setCurrentMonth]
