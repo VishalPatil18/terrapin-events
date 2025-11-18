@@ -1,0 +1,185 @@
+/**
+ * Calendar Component Styles
+ * Week 8 - Custom Styling for React Big Calendar
+ */
+
+/* Override react-big-calendar defaults with TEMS theme */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-header {
+  padding: 12px 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151; /* gray-700 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: #f9fafb; /* gray-50 */
+  border-bottom: 2px solid #e5e7eb; /* gray-200 */
+}
+
+.rbc-today {
+  background-color: #fef2f2; /* red-50 */
+}
+
+.rbc-off-range-bg {
+  background-color: #f9fafb; /* gray-50 */
+}
+
+.rbc-date-cell {
+  padding: 8px;
+  text-align: right;
+  font-size: 0.875rem;
+  color: #6b7280; /* gray-500 */
+}
+
+.rbc-date-cell.rbc-now {
+  font-weight: 700;
+  color: #dc2626; /* red-600 */
+}
+
+.rbc-event {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rbc-event:hover {
+  opacity: 1 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.rbc-event-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.rbc-event-content {
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rbc-day-slot .rbc-event {
+  border: none;
+}
+
+.rbc-day-slot .rbc-event-label {
+  display: none;
+}
+
+.rbc-selected-cell {
+  background-color: #fef2f2; /* red-50 */
+}
+
+.rbc-show-more {
+  background-color: transparent;
+  color: #dc2626; /* red-600 */
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  border: none;
+  text-align: center;
+  width: 100%;
+}
+
+.rbc-show-more:hover {
+  background-color: #fef2f2; /* red-50 */
+  text-decoration: underline;
+}
+
+.rbc-overlay {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb; /* gray-200 */
+  border-radius: 0.5rem;
+  background-color: white;
+  padding: 8px;
+  max-width: 300px;
+}
+
+.rbc-overlay-header {
+  border-bottom: 2px solid #e5e7eb; /* gray-200 */
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #111827; /* gray-900 */
+}
+
+.rbc-agenda-view {
+  border: 1px solid #e5e7eb; /* gray-200 */
+  border-radius: 0.5rem;
+}
+
+.rbc-agenda-table {
+  border: none;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: #6b7280; /* gray-500 */
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rbc-agenda-event-cell {
+  padding: 12px 16px;
+}
+
+.rbc-agenda-table tbody > tr > td + td {
+  border-left: 1px solid #f3f4f6; /* gray-100 */
+}
+
+.rbc-agenda-table tbody > tr + tr {
+  border-top: 1px solid #f3f4f6; /* gray-100 */
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #f3f4f6; /* gray-100 */
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #e5e7eb; /* gray-200 */
+}
+
+.rbc-time-content {
+  border-top: 2px solid #e5e7eb; /* gray-200 */
+}
+
+.rbc-current-time-indicator {
+  background-color: #dc2626; /* red-600 */
+  height: 2px;
+}
+
+/* Week view specific styles */
+.rbc-time-header.rbc-overflowing {
+  border-right: 1px solid #e5e7eb; /* gray-200 */
+}
+
+.rbc-time-content > * + * > * {
+  border-left: 1px solid #f3f4f6; /* gray-100 */
+}
+
+/* Day view styles */
+.rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #f3f4f6; /* gray-100 */
+}
+
+.rbc-timeslot-group {
+  border-bottom: 1px solid #f3f4f6; /* gray-100 */
+  min-height: 60px;
+}
+
+/* Loading state */
+.calendar-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}

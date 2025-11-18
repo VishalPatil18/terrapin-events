@@ -117,7 +117,47 @@ resources:
           LambdaFunctionArn:
             Fn::ImportValue: ${self:provider.stage}-ListMyRegistrationsLambdaArn
 
-    # ==================== IAM ROLE ====================
+    # ==================== SEARCH DATA SOURCES (Week 7) ====================
+    SearchEventsDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: SearchEventsDataSource
+        Description: Lambda data source for advanced event search
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-SearchEventsLambdaArn
+
+    GetCalendarEventsDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: GetCalendarEventsDataSource
+        Description: Lambda data source for calendar event queries
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-GetCalendarEventsLambdaArn
+
+    GetEventBySlugDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: GetEventBySlugDataSource
+        Description: Lambda data source for slug-based event retrieval
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-GetEventBySlugLambdaArn
+
+    # ==================== IAM ROLES ====================
     AppSyncLambdaRole:
       Type: AWS::IAM::Role
       Properties:
@@ -147,6 +187,10 @@ resources:
                     - Fn::ImportValue: ${self:provider.stage}-CancelRegistrationLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-CheckInAttendeeLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-ListMyRegistrationsLambdaArn
+                    # Search Lambdas (Week 7)
+                    - Fn::ImportValue: ${self:provider.stage}-SearchEventsLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-GetCalendarEventsLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-GetEventBySlugLambdaArn
 
     # ==================== EVENT MUTATION RESOLVERS ====================
     CreateEventResolver:
@@ -278,6 +322,58 @@ resources:
         TypeName: Query
         FieldName: listMyRegistrations
         DataSourceName: !GetAtt ListMyRegistrationsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    # ==================== SEARCH QUERY RESOLVERS (Week 7) ====================
+    AdvancedSearchEventsResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: advancedSearchEvents
+        DataSourceName: !GetAtt SearchEventsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    GetCalendarEventsResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: getCalendarEvents
+        DataSourceName: !GetAtt GetCalendarEventsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    GetEventBySlugResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: getEventBySlug
+        DataSourceName: !GetAtt GetEventBySlugDataSource.Name
         RequestMappingTemplate: |
           {
             "version": "2018-05-29",

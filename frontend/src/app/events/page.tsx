@@ -1,13 +1,13 @@
 /**
- * Events List Page
- * Main page for browsing and searching events
+ * Events List Page - Enhanced with Search & Calendar Navigation
+ * Main page for browsing and discovering events
  * Path: /events
  */
 
 'use client';
 
 import { useState } from 'react';
-import { LayoutGrid, List, Plus } from 'lucide-react';
+import { LayoutGrid, List, Plus, Search as SearchIcon, Calendar as CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
 import { EventCard } from '@/components/events/EventCard';
 import { EventFilters } from '@/components/events/EventFilters';
@@ -61,12 +61,26 @@ export default function EventsPage() {
                 Find and register for upcoming campus events
               </p>
             </div>
-            <Link href="/events/new">
-              <Button variant="primary" className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Create Event
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/events/search">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <SearchIcon className="w-4 h-4" />
+                  Advanced Search
+                </Button>
+              </Link>
+              <Link href="/events/calendar">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4" />
+                  Calendar View
+                </Button>
+              </Link>
+              <Link href="/events/new">
+                <Button variant="primary" className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Create Event
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -140,9 +154,14 @@ export default function EventsPage() {
               <p className="text-gray-600 mb-6">
                 Try adjusting your filters or search criteria
               </p>
-              <Link href="/events/new">
-                <Button variant="primary">Create an Event</Button>
-              </Link>
+              <div className="flex items-center justify-center gap-3">
+                <Link href="/events/search">
+                  <Button variant="outline">Try Advanced Search</Button>
+                </Link>
+                <Link href="/events/new">
+                  <Button variant="primary">Create an Event</Button>
+                </Link>
+              </div>
             </div>
           </div>
         )}
@@ -180,6 +199,49 @@ export default function EventsPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* Feature Highlights */}
+        {!isLoading && filteredEvents.length > 0 && (
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center">
+                  <SearchIcon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Advanced Search
+                </h3>
+              </div>
+              <p className="text-gray-700 mb-4">
+                Use powerful filters and search to find exactly what you're looking for
+              </p>
+              <Link href="/events/search">
+                <Button variant="outline" size="sm">
+                  Try Advanced Search
+                </Button>
+              </Link>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <CalendarIcon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Calendar View
+                </h3>
+              </div>
+              <p className="text-gray-700 mb-4">
+                Visualize events in a calendar to plan your schedule better
+              </p>
+              <Link href="/events/calendar">
+                <Button variant="outline" size="sm">
+                  View Calendar
+                </Button>
+              </Link>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -90,8 +90,16 @@ export async function handler(
 
     return fullEvent;
   } catch (error) {
-    console.error('Error getting event by slug:', error);
-    throw error;
+    console.error('Error getting event by slug:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      tableName: TABLE_NAME,
+      slug: event.arguments.slug,
+    });
+    
+    // Return null for not found (this is allowed by GraphQL schema)
+    return null;
   }
 }
 

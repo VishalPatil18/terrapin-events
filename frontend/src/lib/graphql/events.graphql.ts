@@ -30,6 +30,10 @@ export const EVENT_FRAGMENT = /* GraphQL */ `
     imageUrl
     createdAt
     updatedAt
+    slug
+    shareableUrl
+    availableSeats
+    waitlistAvailable
   }
 `;
 
