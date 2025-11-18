@@ -103,9 +103,11 @@ export interface Registration {
   id: string;
   userId: string;
   eventId: string;
+  event?: Event; // Related event details - resolved by field resolver
   status: RegistrationStatus;
   qrCode: string;
   waitlistPosition?: number;
+  promotionDeadline?: string; // AWSDateTime - 24h deadline for accepting waitlist promotion
   registeredAt: string; // AWSDateTime
   attendedAt?: string; // AWSDateTime
 }

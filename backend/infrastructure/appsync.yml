@@ -126,6 +126,16 @@ resources:
             value: String!
             count: Int!
           }
+          
+          # Event Capacity Info Type
+          type EventCapacityInfo {
+            eventId: ID!
+            capacity: Int!
+            registeredCount: Int!
+            waitlistCount: Int!
+            availableSeats: Int!
+            isFull: Boolean!
+          }
 
           # Location Type
           type Location {
@@ -193,8 +203,12 @@ resources:
             # Users
             getUser(id: ID!): User
             getCurrentUser: User!
+            
+            # Registrations
             getRegistration(id: ID!): Registration
             listMyRegistrations: [Registration!]!
+            checkUserRegistration(eventId: ID!): Registration
+            getEventCapacity(eventId: ID!): EventCapacityInfo!
           }
 
           # Mutations
@@ -205,6 +219,8 @@ resources:
             publishEvent(id: ID!): Event!
             registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
             cancelRegistration(id: ID!): Registration!
+            acceptPromotion(id: ID!): Registration!
+            declinePromotion(id: ID!): Registration!
             checkInAttendee(registrationId: ID!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
           }

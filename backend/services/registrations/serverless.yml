@@ -183,7 +183,7 @@ functions:
     timeout: 29
     environment:
       FUNCTION_NAME: emailNotification
-      SES_FROM_EMAIL: noreply@terrapineve nts.umd.edu  # Update this
+      SES_FROM_EMAIL: noreply@terrapinevents.umd.edu  # Update this
     events:
       - eventBridge:
           eventBus: ${self:custom.eventBusName}
@@ -195,6 +195,101 @@ functions:
               - RegistrationCancelled
               - WaitlistAdded
               - WaitlistPromoted
+
+  # Get Registration Handler
+  getRegistration:
+    handler: handlers/getRegistration.handler
+    name: ${self:service}-getRegistration-${self:provider.stage}
+    description: Lambda handler for getting a single registration
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: getRegistration
+    events:
+      - http:
+          path: registrations/{id}
+          method: get
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Check User Registration Handler
+  checkUserRegistration:
+    handler: handlers/checkUserRegistration.handler
+    name: ${self:service}-checkUserRegistration-${self:provider.stage}
+    description: Lambda handler for checking if user is registered for event
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: checkUserRegistration
+    events:
+      - http:
+          path: registrations/check/{eventId}
+          method: get
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Get Event Capacity Handler
+  getEventCapacity:
+    handler: handlers/getEventCapacity.handler
+    name: ${self:service}-getEventCapacity-${self:provider.stage}
+    description: Lambda handler for getting event capacity information
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: getEventCapacity
+    events:
+      - http:
+          path: events/{eventId}/capacity
+          method: get
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Accept Promotion Handler
+  acceptPromotion:
+    handler: handlers/acceptPromotion.handler
+    name: ${self:service}-acceptPromotion-${self:provider.stage}
+    description: Lambda handler for accepting waitlist promotion
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: acceptPromotion
+    events:
+      - http:
+          path: registrations/{id}/accept-promotion
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Decline Promotion Handler
+  declinePromotion:
+    handler: handlers/declinePromotion.handler
+    name: ${self:service}-declinePromotion-${self:provider.stage}
+    description: Lambda handler for declining waitlist promotion
+    memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: declinePromotion
+    events:
+      - http:
+          path: registrations/{id}/decline-promotion
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
 
 resources:
   Outputs:
@@ -233,3 +328,48 @@ resources:
           - Arn
       Export:
         Name: ${self:provider.stage}-ListMyRegistrationsLambdaArn
+
+    GetRegistrationLambdaArn:
+      Description: ARN of getRegistration Lambda function
+      Value:
+        Fn::GetAtt:
+          - GetRegistrationLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-GetRegistrationLambdaArn
+
+    CheckUserRegistrationLambdaArn:
+      Description: ARN of checkUserRegistration Lambda function
+      Value:
+        Fn::GetAtt:
+          - CheckUserRegistrationLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-CheckUserRegistrationLambdaArn
+
+    GetEventCapacityLambdaArn:
+      Description: ARN of getEventCapacity Lambda function
+      Value:
+        Fn::GetAtt:
+          - GetEventCapacityLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-GetEventCapacityLambdaArn
+
+    AcceptPromotionLambdaArn:
+      Description: ARN of acceptPromotion Lambda function
+      Value:
+        Fn::GetAtt:
+          - AcceptPromotionLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-AcceptPromotionLambdaArn
+
+    DeclinePromotionLambdaArn:
+      Description: ARN of declinePromotion Lambda function
+      Value:
+        Fn::GetAtt:
+          - DeclinePromotionLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-DeclinePromotionLambdaArn
