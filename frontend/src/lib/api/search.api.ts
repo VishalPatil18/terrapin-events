@@ -23,53 +23,63 @@ const client = generateClient();
 
 /**
  * Search events with advanced filters
+ * TEMPORARY: Using listEvents until search Lambda is deployed
  */
 export async function searchEvents(query: SearchQuery): Promise<SearchResult> {
   try {
-    const response = (await client.graphql({
-      query: SEARCH_EVENTS,
-      variables: {
-        input: {
-          query: query.query,
-          filters: query.filters,
-          dateRange: query.dateRange,
-          sort: query.sort,
-          pagination: query.pagination,
-        },
-      },
-    })) as { data: SearchEventsResult };
-
-    const result = response.data.searchEvents;
+    // Import listEvents
+    const { listEvents } = await import('./events.api');
+    
+    // Use listEvents and filter client-side
+    const result = await listEvents(undefined, 50);
+    
+    let filteredItems = result.items;
+    
+    // Client-side filtering
+    if (query.query) {
+      const searchTerm = query.query.toLowerCase();
+      filteredItems = filteredItems.filter(event =>
+        event.title.toLowerCase().includes(searchTerm) ||
+        event.description.toLowerCase().includes(searchTerm) ||
+        (event.tags && event.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+      );
+    }
+    
+    if (query.filters?.categories?.length) {
+      filteredItems = filteredItems.filter(event =>
+        query.filters!.categories!.includes(event.category)
+      );
+    }
+    
+    if (query.filters?.locations?.length) {
+      filteredItems = filteredItems.filter(event =>
+        query.filters!.locations!.some(loc => 
+          event.location.building.toLowerCase().includes(loc.toLowerCase())
+        )
+      );
+    }
+    
+    if (query.dateRange) {
+      filteredItems = filteredItems.filter(event => {
+        const eventDate = new Date(event.startDateTime);
+        const start = new Date(query.dateRange!.start);
+        const end = new Date(query.dateRange!.end);
+        return eventDate >= start && eventDate <= end;
+      });
+    }
+    
+    if (query.filters?.hasAvailableSeats) {
+      filteredItems = filteredItems.filter(event => {
+        const available = event.capacity - event.registeredCount;
+        return available > 0;
+      });
+    }
 
     return {
-      items: result.items.map(item => ({
-        id: item.eventId,
-        title: item.title,
-        description: item.description,
-        startDateTime: item.startDateTime,
-        endDateTime: item.endDateTime,
-        location: item.location,
-        category: item.category,
-        capacity: item.totalCapacity,
-        registeredCount: item.totalCapacity - item.availableSeats,
-        waitlistCount: 0, // Default for search results
-        organizerId: item.organizerName, // Map organizerName to organizerId temporarily
-        status: item.status,
-        tags: [], // Default for search results
-        imageUrl: "",
-        createdAt: "", // Default timestamp
-        updatedAt: "", // Default timestamp
-      })),
-      total: result.total,
-      nextToken: result.nextToken,
-      took: result.took,
-      aggregations: result.aggregations
-        ? {
-            categories: result.aggregations.categories,
-            locations: result.aggregations.locations,
-            dateRanges: result.aggregations.dateRanges,
-          }
-        : undefined,
+      items: filteredItems,
+      total: filteredItems.length,
+      nextToken: undefined,
+      took: 0,
     };
   } catch (error) {
     console.error('Search API error:', error);
@@ -79,40 +89,60 @@ export async function searchEvents(query: SearchQuery): Promise<SearchResult> {
 
 /**
  * Get calendar events for a specific month/view
+ * TEMPORARY: Using listEvents until calendar Lambda is deployed
  */
 export async function getCalendarEvents(
   query: CalendarEventsQuery
 ): Promise<EventSearchItem[]> {
   try {
-    const response = (await client.graphql({
-      query: GET_CALENDAR_EVENTS,
-      variables: {
-        input: {
-          year: query.year,
-          month: query.month,
-          view: query.view,
-          filters: query.filters,
-        },
-      },
-    })) as { data: CalendarEventsResult };
+    // Import listEvents
+    const { listEvents } = await import('./events.api');
+    
+    // Use listEvents and filter client-side
+    const result = await listEvents(undefined, 100);
+    
+    // Filter by month/year
+    let filtered = result.items.filter(event => {
+      const eventDate = new Date(event.startDateTime);
+      return (
+        eventDate.getFullYear() === query.year &&
+        eventDate.getMonth() === query.month - 1
+      );
+    });
+    
+    // Apply category filter
+    if (query.filters?.categories?.length) {
+      filtered = filtered.filter(event =>
+        query.filters!.categories!.includes(event.category)
+      );
+    }
+    
+    // Apply location filter
+    if (query.filters?.locations?.length) {
+      filtered = filtered.filter(event =>
+        query.filters!.locations!.some(loc =>
+          event.location.building.toLowerCase().includes(loc.toLowerCase())
+        )
+      );
+    }
 
-    return response.data.getCalendarEvents.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: '', // Not available in calendar response
-      startDateTime: item.startDateTime,
-      endDateTime: item.endDateTime,
-      location: item.location,
-      category: item.category,
-      capacity: 0, // Not available in calendar response
-      registeredCount: 0, // Calculate from availableSeats if needed
-      waitlistCount: 0, // Not available in calendar response
-      organizerId: '', // Not available in calendar response
-      status: item.status,
-      tags: [], // Not available in calendar response
-      imageUrl: "",
-      createdAt: "",
-      updatedAt: "",
+    return filtered.map(event => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      startDateTime: event.startDateTime,
+      endDateTime: event.endDateTime,
+      location: event.location,
+      category: event.category,
+      capacity: event.capacity,
+      registeredCount: event.registeredCount,
+      waitlistCount: event.waitlistCount,
+      organizerId: event.organizerId,
+      status: event.status,
+      tags: event.tags || [],
+      imageUrl: event.imageUrl || "",
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
     }));
   } catch (error) {
     console.error('Calendar API error:', error);
@@ -122,15 +152,17 @@ export async function getCalendarEvents(
 
 /**
  * Get event by slug (shareable URL)
+ * TEMPORARY: Using listEvents until slug lookup Lambda is deployed
  */
 export async function getEventBySlug(slug: string): Promise<EventSearchItem | null> {
   try {
-    const response = (await client.graphql({
-      query: GET_EVENT_BY_SLUG,
-      variables: { slug },
-    })) as { data: GetEventBySlugResult };
-
-    const event = response.data.getEventBySlug;
+    // Import listEvents
+    const { listEvents } = await import('./events.api');
+    
+    // Use listEvents and find by slug
+    const result = await listEvents(undefined, 100);
+    const event = result.items.find(e => e.slug === slug);
+    
     if (!event) return null;
     
     return {
@@ -141,15 +173,15 @@ export async function getEventBySlug(slug: string): Promise<EventSearchItem | nu
       endDateTime: event.endDateTime,
       location: event.location,
       category: event.category,
-      capacity: event.totalCapacity,
-      registeredCount: event.totalCapacity - event.availableSeats,
-      waitlistCount: 0, // Default for slug lookup
-      organizerId: event.organizerName, // Map organizerName to organizerId
+      capacity: event.capacity,
+      registeredCount: event.registeredCount,
+      waitlistCount: event.waitlistCount,
+      organizerId: event.organizerId,
       status: event.status,
-      tags: [], // Default for slug lookup
-      imageUrl: "",
-      createdAt: "", // Default timestamp
-      updatedAt: "", // Default timestamp
+      tags: event.tags || [],
+      imageUrl: event.imageUrl || "",
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
     };
   } catch (error) {
     console.error('Get event by slug error:', error);

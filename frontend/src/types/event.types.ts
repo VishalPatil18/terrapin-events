@@ -50,6 +50,10 @@ export interface Event {
   imageUrl?: string;
   createdAt: string;
   updatedAt: string;
+  slug?: string;
+  shareableUrl?: string;
+  availableSeats?: number;
+  waitlistAvailable?: boolean;
 }
 
 export interface CreateEventInput {
