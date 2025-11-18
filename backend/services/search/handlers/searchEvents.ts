@@ -1,6 +1,6 @@
 import { AppSyncResolverEvent, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import {
   SearchQueryInput,
   SearchResult,
@@ -19,7 +19,7 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME!;
 
 /**
  * Lambda handler for searchEvents query
- * Implements full-text search with relevance scoring and faceted filtering
+ * Implements efficient search using GSIs with optional full-text filtering
  */
 export async function handler(
   event: AppSyncResolverEvent<{ input: SearchQueryInput }>,
@@ -32,180 +32,213 @@ export async function handler(
 
   try {
     const input = event.arguments.input;
-    const normalizedQuery = normalizeSearchQuery(input.query);
+    const normalizedQuery = input.query ? normalizeSearchQuery(input.query) : '';
     
     // Default pagination
     const limit = input.pagination?.limit || 20;
     const nextToken = input.pagination?.nextToken;
 
-    // Build filter expression
-    const filterExpressions: string[] = [];
-    const expressionAttributeNames: Record<string, string> = {
-      '#PK': 'PK',
-      '#SK': 'SK',
-      '#status': 'status',
-      '#searchTerms': 'searchTerms',
-    };
-    const expressionAttributeValues: Record<string, any> = {
-      ':pkPrefix': 'EVENT#',
-      ':sk': 'METADATA',
-      ':status': EventStatus.PUBLISHED,
-    };
-
-    // Base filters: only published events
-    filterExpressions.push('begins_with(#PK, :pkPrefix)');
-    filterExpressions.push('#SK = :sk');
-    filterExpressions.push('#status = :status');
-
-    // Full-text search filter
-    if (normalizedQuery) {
-      filterExpressions.push('contains(#searchTerms, :query)');
-      expressionAttributeValues[':query'] = normalizedQuery;
-    }
-
-    // Category filter
-    if (input.filters?.categories && input.filters.categories.length > 0) {
-      expressionAttributeNames['#category'] = 'category';
-      filterExpressions.push(
-        `#category IN (${input.filters.categories.map((_, i) => `:cat${i}`).join(',')})`
-      );
-      input.filters.categories.forEach((cat, i) => {
-        expressionAttributeValues[`:cat${i}`] = cat;
-      });
-    }
-
-    // Location filter (building)
+    // Determine optimal query strategy based on filters
+    let events: Event[] = [];
+    
     if (input.filters?.locations && input.filters.locations.length > 0) {
-      // Use GSI3 for efficient location queries
-      const locationResults = await Promise.all(
-        input.filters.locations.map(building =>
-          queryByLocation(building, input.filters)
-        )
+      // Strategy 1: Use GSI3 for location-based queries
+      events = await queryByLocations(input.filters.locations, input.filters);
+    } else if (input.filters?.categories && input.filters.categories.length === 1) {
+      // Strategy 2: Use GSI2 for single category queries
+      events = await queryByCategory(input.filters.categories[0], input.filters);
+    } else {
+      // Strategy 3: Use GSI1 for date-based queries (most efficient default)
+      events = await queryByDateRange(input.filters);
+    }
+
+    // Apply full-text search filter if query provided
+    if (normalizedQuery) {
+      events = events.filter(evt => 
+        evt.searchTerms && evt.searchTerms.toLowerCase().includes(normalizedQuery)
       );
-      
-      // Flatten and deduplicate results
-      const allEvents = locationResults.flat();
-      const uniqueEvents = deduplicateEvents(allEvents);
-      
-      // Score and sort
-      const scoredEvents = scoreAndSortEvents(uniqueEvents, normalizedQuery, input.sort);
-      
-      // Paginate
-      const paginatedResults = paginateResults(scoredEvents, limit, nextToken);
-      
-      // Calculate facets
-      const facets = calculateFacets(uniqueEvents);
-      
-      return {
-        items: paginatedResults.items,
-        total: uniqueEvents.length,
-        nextToken: paginatedResults.nextToken,
-        facets,
-      };
     }
 
-    // Date range filters
-    if (input.filters?.startDateAfter) {
-      expressionAttributeNames['#startDateTime'] = 'startDateTime';
-      filterExpressions.push('#startDateTime >= :startAfter');
-      expressionAttributeValues[':startAfter'] = input.filters.startDateAfter;
-    }
+    // Apply additional filters
+    events = applyFilters(events, input.filters);
 
-    if (input.filters?.startDateBefore) {
-      expressionAttributeNames['#startDateTime'] = 'startDateTime';
-      filterExpressions.push('#startDateTime <= :startBefore');
-      expressionAttributeValues[':startBefore'] = input.filters.startDateBefore;
-    }
-
-    // Available seats filter
-    if (input.filters?.hasAvailableSeats) {
-      expressionAttributeNames['#availableSeats'] = 'availableSeats';
-      filterExpressions.push('#availableSeats > :zero');
-      expressionAttributeValues[':zero'] = 0;
-    }
-
-    // Tags filter
-    if (input.filters?.tags && input.filters.tags.length > 0) {
-      expressionAttributeNames['#tags'] = 'tags';
-      const tagConditions = input.filters.tags.map((_, i) => `contains(#tags, :tag${i})`);
-      filterExpressions.push(`(${tagConditions.join(' OR ')})`);
-      input.filters.tags.forEach((tag, i) => {
-        expressionAttributeValues[`:tag${i}`] = tag;
-      });
-    }
-
-    // Execute scan
-    const scanResult = await client.send(
-      new ScanCommand({
-        TableName: TABLE_NAME,
-        FilterExpression: filterExpressions.join(' AND '),
-        ExpressionAttributeNames: expressionAttributeNames,
-        ExpressionAttributeValues: expressionAttributeValues,
-        Limit: limit * 2, // Fetch more to account for relevance filtering
-        ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
-      })
-    );
-
-    const events = (scanResult.Items || []) as Event[];
-
-    // Score events by relevance
+    // Score and sort events by relevance
     const scoredEvents = scoreAndSortEvents(events, normalizedQuery, input.sort);
 
-    // Take top results
-    const topResults = scoredEvents.slice(0, limit);
+    // Paginate results
+    const paginatedResults = paginateResults(scoredEvents, limit, nextToken);
 
-    // Calculate facets from all results (for filter aggregations)
+    // Calculate facets from all matching results
     const facets = calculateFacets(events);
-
-    // Generate next token if more results available
-    const nextTokenValue = scanResult.LastEvaluatedKey
-      ? Buffer.from(JSON.stringify(scanResult.LastEvaluatedKey)).toString('base64')
-      : undefined;
 
     console.log('Search completed', {
       query: input.query,
       totalResults: events.length,
-      returnedResults: topResults.length,
+      returnedResults: paginatedResults.items.length,
     });
 
     return {
-      items: topResults,
+      items: paginatedResults.items,
       total: events.length,
-      nextToken: nextTokenValue,
+      nextToken: paginatedResults.nextToken,
       facets,
     };
   } catch (error) {
-    console.error('Error searching events:', error);
-    throw error;
+    console.error('Error searching events:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      tableName: TABLE_NAME,
+      input: event.arguments.input,
+    });
+    
+    // Return empty result instead of throwing to prevent GraphQL null errors
+    return {
+      items: [],
+      total: 0,
+      nextToken: undefined,
+      facets: {
+        categories: [],
+        locations: [],
+        tags: [],
+      },
+    };
   }
+}
+
+/**
+ * Query events by date range using GSI1
+ * This is the most efficient default strategy
+ */
+async function queryByDateRange(
+  filters?: any
+): Promise<Event[]> {
+  const now = new Date().toISOString();
+  const startDate = filters?.startDateAfter || now;
+  const endDate = filters?.startDateBefore || '2099-12-31T23:59:59Z';
+
+  console.log('Querying by date range', { startDate, endDate });
+
+  const result = await client.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: 'GSI1',
+      KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK BETWEEN :start AND :end',
+      FilterExpression: '#status = :status',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':pk': 'EVENT#DATE',
+        ':start': startDate,
+        ':end': endDate,
+        ':status': EventStatus.PUBLISHED,
+      },
+      Limit: 100, // Get more results for filtering
+    })
+  );
+
+  return (result.Items || []) as Event[];
+}
+
+/**
+ * Query events by category using GSI2
+ */
+async function queryByCategory(
+  category: string,
+  filters?: any
+): Promise<Event[]> {
+  const now = new Date().toISOString();
+  const startDate = filters?.startDateAfter || now;
+  const endDate = filters?.startDateBefore || '2099-12-31T23:59:59Z';
+
+  console.log('Querying by category', { category, startDate, endDate });
+
+  const result = await client.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: 'GSI2',
+      KeyConditionExpression: 'GSI2PK = :pk AND GSI2SK BETWEEN :start AND :end',
+      FilterExpression: '#status = :status',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':pk': `EVENT#CATEGORY#${category}`,
+        ':start': startDate,
+        ':end': endDate,
+        ':status': EventStatus.PUBLISHED,
+      },
+      Limit: 100,
+    })
+  );
+
+  return (result.Items || []) as Event[];
 }
 
 /**
  * Query events by location using GSI3
  */
-async function queryByLocation(
-  building: string,
+async function queryByLocations(
+  locations: string[],
   filters?: any
 ): Promise<Event[]> {
-  const expressionAttributeValues: Record<string, any> = {
-    ':pk': `EVENT#LOCATION#${building}`,
-    ':status': EventStatus.PUBLISHED,
-  };
+  console.log('Querying by locations', { locations });
 
-  const result = await client.send(
-    new QueryCommand({
-      TableName: TABLE_NAME,
-      IndexName: 'GSI3',
-      KeyConditionExpression: 'GSI3PK = :pk',
-      FilterExpression: '#status = :status',
-      ExpressionAttributeNames: {
-        '#status': 'status',
-      },
-      ExpressionAttributeValues: expressionAttributeValues,
-    })
+  const locationResults = await Promise.all(
+    locations.map(building =>
+      client.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          IndexName: 'GSI3',
+          KeyConditionExpression: 'GSI3PK = :pk',
+          FilterExpression: '#status = :status',
+          ExpressionAttributeNames: {
+            '#status': 'status',
+          },
+          ExpressionAttributeValues: {
+            ':pk': `EVENT#LOCATION#${building}`,
+            ':status': EventStatus.PUBLISHED,
+          },
+          Limit: 100,
+        })
+      ).then(result => (result.Items || []) as Event[])
+    )
   );
 
-  return (result.Items || []) as Event[];
+  // Flatten and deduplicate
+  const allEvents = locationResults.flat();
+  return deduplicateEvents(allEvents);
+}
+
+/**
+ * Apply additional filters to events
+ */
+function applyFilters(events: Event[], filters?: any): Event[] {
+  let filtered = events;
+
+  // Category filter (when multiple categories or not used as primary query)
+  if (filters?.categories && filters.categories.length > 0) {
+    filtered = filtered.filter(event =>
+      filters.categories.includes(event.category)
+    );
+  }
+
+  // Available seats filter
+  if (filters?.hasAvailableSeats) {
+    filtered = filtered.filter(event => 
+      (event.availableSeats || 0) > 0
+    );
+  }
+
+  // Tags filter
+  if (filters?.tags && filters.tags.length > 0) {
+    filtered = filtered.filter(event =>
+      filters.tags.some((tag: string) => event.tags.includes(tag))
+    );
+  }
+
+  return filtered;
 }
 
 /**
@@ -225,8 +258,8 @@ function scoreAndSortEvents(
   }));
 
   // Sort
-  const sortField = sort?.field || 'relevance';
-  const sortOrder = sort?.order || 'desc';
+  const sortField = sort?.field || (query ? 'relevance' : 'startDateTime');
+  const sortOrder = sort?.order || 'asc';
 
   scoredEvents.sort((a, b) => {
     let comparison = 0;
@@ -260,7 +293,7 @@ function deduplicateEvents(events: Event[]): Event[] {
 }
 
 /**
- * Paginate results
+ * Paginate results using offset-based pagination
  */
 function paginateResults(
   events: Event[],

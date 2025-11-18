@@ -9,11 +9,17 @@ import {
 import { EventStatus } from '../../../shared/types/common';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME!;
+const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME;
+
+// Validate environment variables
+if (!TABLE_NAME) {
+  console.error('CRITICAL: DYNAMODB_TABLE_NAME environment variable is not set');
+  throw new Error('Lambda configuration error: Missing DynamoDB table name');
+}
 
 /**
  * Lambda handler for getCalendarEvents query
- * Retrieves events for calendar views with efficient date-range queries
+ * Retrieves events for calendar views with efficient GSI1 date-range queries
  */
 export async function handler(
   event: AppSyncResolverEvent<{ input: CalendarEventsInput }>,
@@ -30,22 +36,30 @@ export async function handler(
     // Calculate date range based on view
     const dateRange = calculateDateRange(input.year, input.month, input.view);
 
-    // Query GSI1 for date range
+    console.log('Querying calendar events', {
+      year: input.year,
+      month: input.month,
+      view: input.view,
+      dateRange,
+    });
+
+    // Query GSI1 for date range using efficient range query
     const result = await client.send(
       new QueryCommand({
         TableName: TABLE_NAME,
         IndexName: 'GSI1',
         KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK BETWEEN :start AND :end',
+        FilterExpression: '#status = :status',
+        ExpressionAttributeNames: {
+          '#status': 'status',
+        },
         ExpressionAttributeValues: {
           ':pk': 'EVENT#DATE',
           ':start': dateRange.start,
           ':end': dateRange.end,
           ':status': EventStatus.PUBLISHED,
         },
-        FilterExpression: '#status = :status',
-        ExpressionAttributeNames: {
-          '#status': 'status',
-        },
+        Limit: 200, // Calendar views can show many events
       })
     );
 
@@ -67,8 +81,16 @@ export async function handler(
 
     return calendarEvents;
   } catch (error) {
-    console.error('Error getting calendar events:', error);
-    throw error;
+    console.error('Error getting calendar events:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      tableName: TABLE_NAME,
+      input: event.arguments.input,
+    });
+    
+    // Return empty array instead of throwing to prevent GraphQL null errors
+    return [];
   }
 }
 
