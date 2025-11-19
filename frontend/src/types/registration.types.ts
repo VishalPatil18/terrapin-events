@@ -90,7 +90,7 @@ export interface CancelRegistrationInput {
 /**
  * Input type for checking in an attendee
  */
-export interface CheckInInput {
+export interface CheckInAttendeeInput {
   /** Registration ID */
   registrationId: string;
   

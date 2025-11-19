@@ -373,7 +373,7 @@ export async function declinePromotion(registrationId: string): Promise<Registra
  * Check in attendee using QR code
  * Organizer/Admin only
  */
-export async function checkInAttendee(input: CheckInInput): Promise<Registration> {
+export async function checkInAttendee(input: CheckInAttendeeInput): Promise<Registration> {
   try {
     const result = (await client.graphql({
       query: CHECK_IN_ATTENDEE,
