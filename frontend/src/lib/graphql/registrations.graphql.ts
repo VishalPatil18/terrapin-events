@@ -27,6 +27,7 @@ export const REGISTRATION_FRAGMENT = /* GraphQL */ `
 /**
  * Registration with Event Details Fragment
  * Includes full event information with registration
+ * Note: organizer field removed to avoid null errors until Event.organizer resolver is deployed
  */
 export const REGISTRATION_WITH_EVENT_FRAGMENT = /* GraphQL */ `
   fragment RegistrationWithEventFields on Registration {
@@ -53,12 +54,6 @@ export const REGISTRATION_WITH_EVENT_FRAGMENT = /* GraphQL */ `
       waitlistCount
       status
       imageUrl
-      organizer {
-        id
-        firstName
-        lastName
-        email
-      }
     }
   }
   ${REGISTRATION_FRAGMENT}
