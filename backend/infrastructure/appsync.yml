@@ -221,7 +221,7 @@ resources:
             cancelRegistration(id: ID!): Registration!
             acceptPromotion(id: ID!): Registration!
             declinePromotion(id: ID!): Registration!
-            checkInAttendee(registrationId: ID!): Registration!
+            checkInAttendee(input: CheckInAttendeeInput!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
           }
 
@@ -318,6 +318,11 @@ resources:
           input CalendarFiltersInput {
             categories: [EventCategory!]
             locations: [String!]
+          }
+          
+          input CheckInAttendeeInput {
+            registrationId: ID!
+            qrCodeData: String!
           }
             
           # Connection Types
