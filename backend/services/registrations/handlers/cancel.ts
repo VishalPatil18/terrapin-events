@@ -30,7 +30,7 @@ export async function handler(
 ): Promise<GraphQLRegistration> {
   console.log('CancelRegistration handler invoked', {
     requestId: context.awsRequestId,
-    id: event.arguments.id,
+    registrationId: event.arguments.registrationId,
   });
 
   try {
