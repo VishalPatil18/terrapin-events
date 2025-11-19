@@ -45,7 +45,7 @@ export const handler = async (event: SNSEvent, context: Context): Promise<void> 
           
           try {
             await preferencesManager.updatePreferences(userId, {
-              channels: { email: false },
+              emailEnabled: false,
             });
 
             console.log(`User ${userId} unsubscribed from email notifications due to complaint`);

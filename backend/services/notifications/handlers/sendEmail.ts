@@ -49,6 +49,11 @@ export const handler = async (
       data
     );
 
+    // Ensure template rendered correctly
+    if (!html || !text || !subject) {
+      throw new Error('Template rendering failed: missing html, text, or subject');
+    }
+
     // Send email via SES
     const result = await sesClient.sendEmail(
       [email],
@@ -57,17 +62,16 @@ export const handler = async (
       text,
       {
           replyTo: process.env.SES_REPLY_TO_EMAIL,
-          tags: {
-            NotificationType: notificationType,
-            Priority: priority,
-            EventId: metadata.eventId,
-            UserId: userId,
-          },
       }
     );
 
     if (!result.success) {
-      throw new Error(result.error || 'Failed to send email');
+      const errorMessage =
+        typeof result.error === 'string'
+          ? result.error
+          : result.error?.message || 'Failed to send email';
+
+      throw new Error(errorMessage);
     }
 
     // Track successful delivery

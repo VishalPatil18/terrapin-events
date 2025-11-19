@@ -298,6 +298,19 @@ export interface SendEmailInput {
   userId: string;
 }
 
+/**
+ * Internal request shape for sendEmail handler & retry queue
+ */
+export interface SendEmailRequest {
+  userId: string;
+  email: string;
+  notificationType: NotificationType;
+  priority: NotificationPriority;
+  data: Record<string, any>;
+  metadata: Record<string, any>;
+  attempt: number; // used by retryFailedNotification, defaults to 1 in handler
+}
+
 // ============================================================================
 // NOTIFICATION PAYLOAD INTERFACES
 // ============================================================================

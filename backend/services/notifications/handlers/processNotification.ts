@@ -1,6 +1,6 @@
 import { EventBridgeEvent, Context } from 'aws-lambda';
-import { sendEmail } from './sendEmail';
-import { createInAppNotification } from './createInAppNotification';
+import { handler as sendEmailHandler } from './sendEmail';
+import { handler as createInAppNotificationHandler } from './createInAppNotification';
 import preferencesManager from '../lib/preferences/preferencesManager';
 import doNotDisturbChecker from '../lib/preferences/doNotDisturbChecker';
 import {
@@ -55,8 +55,7 @@ export const handler = async (
           const preferences = await preferencesManager.getPreferences(recipient.userId);
           
           // Check if user wants this notification type
-          const typeKey = getPreferenceKey(notificationType);
-          if (!preferences.enabledTypes[typeKey]) {
+          if (!preferences.enabledTypes[notificationType]) {
             console.log(`User ${recipient.userId} has disabled ${notificationType} notifications`);
             return;
           }
@@ -85,12 +84,12 @@ export const handler = async (
           );
 
           // Send via enabled channels
-          const sendPromises: Promise<void>[] = [];
+          const sendPromises: Promise<any>[] = [];
 
           // Email notification
-          if (preferences.channels.email) {
+          if (preferences.emailEnabled) {
             sendPromises.push(
-              sendEmail.handler(
+              sendEmailHandler(
                 {
                   userId: recipient.userId,
                   email: recipient.email,
@@ -101,6 +100,7 @@ export const handler = async (
                     eventId: detail.eventId,
                     requestId: context.awsRequestId,
                   },
+                  attempt: 1,
                 },
                 context
               )
@@ -108,12 +108,12 @@ export const handler = async (
           }
 
           // In-app notification
-          if (preferences.channels.inApp) {
+          if (preferences.inAppEnabled) {
             sendPromises.push(
-              createInAppNotification.handler(
+              createInAppNotificationHandler(
                 {
                   userId: recipient.userId,
-                  notificationType,
+                  type: notificationType, // 👈 must be `type`, not `notificationType`
                   priority,
                   data: notificationData,
                   metadata: {
