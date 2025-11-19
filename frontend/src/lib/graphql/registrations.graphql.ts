@@ -178,8 +178,8 @@ export const REGISTER_FOR_EVENT = /* GraphQL */ `
  * Automatically promotes next person from waitlist if applicable
  */
 export const CANCEL_REGISTRATION = /* GraphQL */ `
-  mutation CancelRegistration($registrationId: ID!) {
-    cancelRegistration(registrationId: $registrationId) {
+  mutation CancelRegistration($id: ID!) {
+    cancelRegistration(id: $id) {
       ...RegistrationFields
     }
   }

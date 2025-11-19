@@ -34,7 +34,7 @@ export async function handler(
   });
 
   try {
-    const { id: registrationId } = event.arguments;
+    const { registrationId: registrationId } = event.arguments;
 
     // 1. Get user ID from AppSync identity
     const userId = getUserIdFromIdentity(event.identity);
