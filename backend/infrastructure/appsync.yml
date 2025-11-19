@@ -218,7 +218,7 @@ resources:
             deleteEvent(id: ID!): Event!
             publishEvent(id: ID!): Event!
             registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
-            cancelRegistration(id: ID!): Registration!
+            cancelRegistration(registrationId: ID!): Registration!
             acceptPromotion(id: ID!): Registration!
             declinePromotion(id: ID!): Registration!
             checkInAttendee(input: CheckInAttendeeInput!): Registration!

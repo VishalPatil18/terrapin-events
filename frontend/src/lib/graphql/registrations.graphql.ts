@@ -179,7 +179,7 @@ export const REGISTER_FOR_EVENT = /* GraphQL */ `
  */
 export const CANCEL_REGISTRATION = /* GraphQL */ `
   mutation CancelRegistration($registrationId: ID!) {
-    cancelRegistration(id: $registrationId) {
+    cancelRegistration(registrationId: $registrationId) {
       ...RegistrationFields
     }
   }

@@ -183,7 +183,7 @@ type Mutation {
   
   # Registrations
   registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
-  cancelRegistration(id: ID!): Registration!
+  cancelRegistration(registrationId: ID!): Registration!
   acceptPromotion(id: ID!): Registration!
   declinePromotion(id: ID!): Registration!
   checkInAttendee(registrationId: ID!): Registration!

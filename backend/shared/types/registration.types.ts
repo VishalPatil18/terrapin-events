@@ -68,7 +68,7 @@ export interface RegisterForEventInput {
 }
 
 export interface CancelRegistrationInput {
-  id: string;  // Registration ID
+  registrationId: string;  // Registration ID
 }
 
 export interface CheckInAttendeeInput {
