@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Calendar, Users, Tag, ExternalLink, Loader2 } from 'lucide-react';
 import { Event, formatEventDateTime, getAvailableSeats, isEventFull, getEventCategoryLabel } from '@/types/event.types';
 import { useRegistrationActions, useEventRegistration } from '@/hooks/registrations/useRegistrations';
+import { useAuth } from '@/hooks/useAuth';
 import { Alert } from '@/components/ui/Alert';
 
 export interface EventDetailProps {
@@ -19,6 +20,10 @@ export function EventDetail({ event }: EventDetailProps) {
   const availableSeats = getAvailableSeats(event);
   const isFull = isEventFull(event);
   const imageUrl = event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/400`;
+
+  // Get current user
+  const { user } = useAuth();
+  const isOrganizer = user?.userId === event.organizerId;
 
   // Registration hooks
   const { register, cancel, isLoading, error, success, clearMessages } = useRegistrationActions();
@@ -277,16 +282,39 @@ export function EventDetail({ event }: EventDetailProps) {
 
             {/* Action Buttons */}
             <div className="space-y-3 pt-4 border-t border-gray-200">
-              {isRegistered ? (
-                <button
-                  onClick={handleCancelRegistration}
-                  disabled={isLoading}
-                  className="w-full py-3 px-4 border-2 border-red-300 rounded-lg font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Cancel Registration
-                </button>
+              {isOrganizer ? (
+                // Organizers can't register for their own events
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-blue-900">
+                    You are the organizer of this event
+                  </p>
+                </div>
+              ) : isRegistered && registration ? (
+                // User is registered - show cancel button
+                <>
+                  {registration.status === 'WAITLISTED' && (
+                    <button
+                      onClick={handleCancelRegistration}
+                      disabled={isLoading}
+                      className="w-full py-3 px-4 border-2 border-yellow-300 rounded-lg font-semibold text-yellow-700 hover:bg-yellow-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Leave Waitlist
+                    </button>
+                  )}
+                  {(registration.status === 'REGISTERED' || registration.status === 'PROMOTION_PENDING') && (
+                    <button
+                      onClick={handleCancelRegistration}
+                      disabled={isLoading}
+                      className="w-full py-3 px-4 border-2 border-red-300 rounded-lg font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Cancel Registration
+                    </button>
+                  )}
+                </>
               ) : (
+                // User not registered - show register/join waitlist button
                 <button
                   onClick={handleRegister}
                   disabled={isLoading}

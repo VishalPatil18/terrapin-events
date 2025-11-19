@@ -305,7 +305,13 @@ export function useEventRegistration(eventId: string | null) {
         setIsLoading(true);
         const data = await registrationsAPI.checkUserRegistration(eventId);
         setRegistration(data);
-        setIsRegistered(!!data);
+        // Only set isRegistered to true for active statuses
+        const activeStatuses = [
+          RegistrationStatus.REGISTERED,
+          RegistrationStatus.WAITLISTED,
+          RegistrationStatus.PROMOTION_PENDING,
+        ];
+        setIsRegistered(!!data && activeStatuses.includes(data.status));
       } catch (err) {
         console.error('Error checking registration:', err);
         setRegistration(null);
@@ -327,10 +333,18 @@ export function useEventRegistration(eventId: string | null) {
     registrationsAPI.checkUserRegistration(eventId)
       .then(data => {
         setRegistration(data);
-        setIsRegistered(!!data);
+        // Only set isRegistered to true for active statuses
+        const activeStatuses = [
+          RegistrationStatus.REGISTERED,
+          RegistrationStatus.WAITLISTED,
+          RegistrationStatus.PROMOTION_PENDING,
+        ];
+        setIsRegistered(!!data && activeStatuses.includes(data.status));
       })
       .catch(err => {
         console.error('Error refreshing registration:', err);
+        setRegistration(null);
+        setIsRegistered(false);
       });
   }, [eventId]);
 
