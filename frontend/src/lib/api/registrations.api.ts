@@ -285,7 +285,7 @@ export async function cancelRegistration(
     const result = (await client.graphql({
       query: CANCEL_REGISTRATION,
       variables: {
-        id: input.registrationId,  // GraphQL query expects 'id' variable
+        registrationId: input.registrationId,
       },
     })) as GraphQLResult<{ cancelRegistration: Registration }>;
 

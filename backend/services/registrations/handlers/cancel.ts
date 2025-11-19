@@ -25,7 +25,7 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
  * Lambda handler for cancelRegistration mutation
  */
 export async function handler(
-  event: AppSyncResolverEvent<{ id: string }>,
+  event: AppSyncResolverEvent<{ registrationId: string }>,
   context: Context
 ): Promise<GraphQLRegistration> {
   console.log('CancelRegistration handler invoked', {
@@ -34,7 +34,7 @@ export async function handler(
   });
 
   try {
-    const { registrationId: registrationId } = event.arguments;
+    const { registrationId } = event.arguments;
 
     // 1. Get user ID from AppSync identity
     const userId = getUserIdFromIdentity(event.identity);
