@@ -1,0 +1,363 @@
+service: tems-notifications
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+#  profile: tems-${self:provider.stage}
+
+  environment:
+    DYNAMODB_TABLE_NAME: terrapin-events-${self:provider.stage}
+    EVENT_BUS_NAME: terrapin-events-${self:provider.stage}
+    SES_FROM_EMAIL: noreply@terrapinevents.umd.edu
+    SES_REPLY_TO_EMAIL: support@terrapinevents.umd.edu
+    SES_CONFIGURATION_SET: tems-email-tracking-${self:provider.stage}
+    NODE_ENV: ${self:provider.stage}
+
+  iam:
+    role:
+      statements:
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_NAME}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_NAME}/index/*"
+        
+        # SES permissions
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+            - ses:SendTemplatedEmail
+            - ses:GetSendStatistics
+          Resource: "*"
+        
+        # EventBridge permissions
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource:
+            - "arn:aws:events:${self:provider.region}:*:event-bus/${self:provider.environment.EVENT_BUS_NAME}"
+        
+        # SQS permissions
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - !GetAtt NotificationRetryQueue.Arn
+            - !GetAtt NotificationDLQ.Arn
+
+functions:
+  # Main notification processor - orchestrates notification sending
+  processNotification:
+    handler: handlers/processNotification.handler
+    timeout: 30
+    memorySize: 512
+    environment:
+      RETRY_QUEUE_URL: !Ref NotificationRetryQueue
+    events:
+      - eventBridge:
+          eventBus: ${self:provider.environment.EVENT_BUS_NAME}
+          pattern:
+            source:
+              - tems.registrations
+              - tems.events
+            detail-type:
+              - UserRegistered
+              - UserWaitlisted
+              - WaitlistPromoted
+              - RegistrationCancelled
+              - EventUpdated
+              - EventCancelled
+              - EventReminder24h
+              - EventReminder1h
+
+  # Email sending service
+  sendEmail:
+    handler: handlers/sendEmail.handler
+    timeout: 30
+    memorySize: 512
+    environment:
+      RETRY_QUEUE_URL: !Ref NotificationRetryQueue
+
+  # In-app notification creation
+  createInAppNotification:
+    handler: handlers/createInAppNotification.handler
+    timeout: 10
+    memorySize: 256
+
+  # Mark notification as read
+  markAsRead:
+    handler: handlers/markAsRead.handler
+    timeout: 10
+    memorySize: 256
+
+  # Mark all notifications as read
+  markAllAsRead:
+    handler: handlers/markAllAsRead.handler
+    timeout: 30
+    memorySize: 512
+
+  # Update user preferences
+  updatePreferences:
+    handler: handlers/updatePreferences.handler
+    timeout: 10
+    memorySize: 256
+
+  # Get user preferences
+  getPreferences:
+    handler: handlers/getPreferences.handler
+    timeout: 10
+    memorySize: 256
+
+  # List user notifications
+  listNotifications:
+    handler: handlers/listNotifications.handler
+    timeout: 10
+    memorySize: 256
+
+  # SES bounce handler
+  handleBounce:
+    handler: handlers/handleBounce.handler
+    timeout: 10
+    memorySize: 256
+    events:
+      - sns:
+          arn: !Ref BounceNotificationTopic
+          topicName: ses-bounces-${self:provider.stage}
+
+  # SES complaint handler
+  handleComplaint:
+    handler: handlers/handleComplaint.handler
+    timeout: 10
+    memorySize: 256
+    events:
+      - sns:
+          arn: !Ref ComplaintNotificationTopic
+          topicName: ses-complaints-${self:provider.stage}
+
+  # Retry failed notifications from queue
+  retryFailedNotification:
+    handler: handlers/retryFailedNotification.handler
+    timeout: 30
+    memorySize: 512
+    environment:
+      DLQ_URL: !Ref NotificationDLQ
+    events:
+      - sqs:
+          arn: !GetAtt NotificationRetryQueue.Arn
+          batchSize: 10
+          maximumBatchingWindowInSeconds: 5
+
+resources:
+  Resources:
+    # SES Configuration Set for tracking
+    SESConfigurationSet:
+      Type: AWS::SES::ConfigurationSet
+      Properties:
+        Name: tems-email-tracking-${self:provider.stage}
+
+    # SNS Topics for SES Events
+    BounceNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ses-bounces-${self:provider.stage}
+        DisplayName: SES Bounce Notifications
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+    ComplaintNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ses-complaints-${self:provider.stage}
+        DisplayName: SES Complaint Notifications
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+    # SES Event Destinations
+    SESEventDestinationBounce:
+      Type: AWS::SES::ConfigurationSetEventDestination
+      Properties:
+        ConfigurationSetName: !Ref SESConfigurationSet
+        EventDestination:
+          Name: BounceEventDestination
+          Enabled: true
+          MatchingEventTypes:
+            - bounce
+          SnsDestination:
+            TopicARN: !Ref BounceNotificationTopic
+
+    SESEventDestinationComplaint:
+      Type: AWS::SES::ConfigurationSetEventDestination
+      Properties:
+        ConfigurationSetName: !Ref SESConfigurationSet
+        EventDestination:
+          Name: ComplaintEventDestination
+          Enabled: true
+          MatchingEventTypes:
+            - complaint
+          SnsDestination:
+            TopicARN: !Ref ComplaintNotificationTopic
+
+    SESEventDestinationDelivery:
+      Type: AWS::SES::ConfigurationSetEventDestination
+      Properties:
+        ConfigurationSetName: !Ref SESConfigurationSet
+        EventDestination:
+          Name: DeliveryEventDestination
+          Enabled: true
+          MatchingEventTypes:
+            - delivery
+          SnsDestination:
+            TopicARN: !Ref DeliveryNotificationTopic
+
+    DeliveryNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ses-delivery-${self:provider.stage}
+        DisplayName: SES Delivery Notifications
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+    # SQS Queue for retry logic
+    NotificationRetryQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: tems-notification-retry-${self:provider.stage}
+        VisibilityTimeout: 180
+        MessageRetentionPeriod: 86400 # 24 hours
+        ReceiveMessageWaitTimeSeconds: 20
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt NotificationDLQ.Arn
+          maxReceiveCount: 3
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+    # Dead Letter Queue for failed notifications
+    NotificationDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: tems-notification-dlq-${self:provider.stage}
+        MessageRetentionPeriod: 1209600 # 14 days
+        Tags:
+          - Key: Project
+            Value: TEMS
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+    # CloudWatch Alarm for DLQ
+    NotificationDLQAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: tems-notification-dlq-${self:provider.stage}
+        AlarmDescription: Alert when messages end up in DLQ
+        MetricName: ApproximateNumberOfMessagesVisible
+        Namespace: AWS/SQS
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        Dimensions:
+          - Name: QueueName
+            Value: !GetAtt NotificationDLQ.QueueName
+        TreatMissingData: notBreaching
+
+  Outputs:
+    NotificationRetryQueueUrl:
+      Description: URL of the notification retry queue
+      Value: !Ref NotificationRetryQueue
+      Export:
+        Name: ${self:provider.stage}-NotificationRetryQueueUrl
+
+    NotificationDLQUrl:
+      Description: URL of the notification DLQ
+      Value: !Ref NotificationDLQ
+      Export:
+        Name: ${self:provider.stage}-NotificationDLQUrl
+
+    SESConfigurationSetName:
+      Description: Name of the SES configuration set
+      Value: !Ref SESConfigurationSet
+      Export:
+        Name: ${self:provider.stage}-SESConfigurationSet
+
+    # Lambda Function ARNs for AppSync Integration
+    ListNotificationsLambdaArn:
+      Description: ARN of the listNotifications Lambda function
+      Value: !GetAtt ListNotificationsLambdaFunction.Arn
+      Export:
+        Name: ${self:provider.stage}-ListNotificationsLambdaArn
+
+    MarkAsReadLambdaArn:
+      Description: ARN of the markAsRead Lambda function
+      Value: !GetAtt MarkAsReadLambdaFunction.Arn
+      Export:
+        Name: ${self:provider.stage}-MarkAsReadLambdaArn
+
+    MarkAllAsReadLambdaArn:
+      Description: ARN of the markAllAsRead Lambda function
+      Value: !GetAtt MarkAllAsReadLambdaFunction.Arn
+      Export:
+        Name: ${self:provider.stage}-MarkAllAsReadLambdaArn
+
+    GetPreferencesLambdaArn:
+      Description: ARN of the getPreferences Lambda function
+      Value: !GetAtt GetPreferencesLambdaFunction.Arn
+      Export:
+        Name: ${self:provider.stage}-GetPreferencesLambdaArn
+
+    UpdatePreferencesLambdaArn:
+      Description: ARN of the updatePreferences Lambda function
+      Value: !GetAtt UpdatePreferencesLambdaFunction.Arn
+      Export:
+        Name: ${self:provider.stage}-UpdatePreferencesLambdaArn
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.github/**'
+    - '!__tests__/**'
+    - '!*.md'
+    - 'handlers/**'
+    - 'lib/**'
+    - 'types/**'
+    - 'templates/**'
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    exclude:
+      - aws-sdk
+    target: node20
+    platform: node
+    concurrency: 10

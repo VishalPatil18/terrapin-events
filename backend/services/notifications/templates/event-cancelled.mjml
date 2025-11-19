@@ -1,0 +1,189 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{eventTitle}} - Event Cancelled</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="14px" color="#555555" line-height="24px" />
+      <mj-button background-color="#E03A3E" color="#ffffff" font-weight="bold" border-radius="4px" padding="12px 30px" />
+    </mj-attributes>
+    <mj-style>
+      .umd-red { color: #E03A3E; }
+      .umd-gold { color: #FFD520; }
+      .card { background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin: 10px 0; }
+    </mj-style>
+  </mj-head>
+  
+  <mj-body background-color="#f4f4f4">
+    
+    <!-- Header Section with UMD Branding -->
+    <mj-section background-color="#dc3545" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="28px" font-weight="bold" padding="0">
+          ❌ Event Cancelled
+        </mj-text>
+        <mj-text align="center" color="#ffffff" font-size="16px" padding="10px 0 0 0">
+          Terrapin Events
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Important Notice -->
+    <mj-section background-color="#f8d7da" border="3px solid #dc3545" padding="20px 25px">
+      <mj-column>
+        <mj-text font-size="16px" color="#721c24" font-weight="bold" align="center">
+          This event has been cancelled by the organizer
+        </mj-text>
+        <mj-text font-size="14px" color="#721c24" align="center" padding="10px 0 0 0">
+          Your registration has been automatically cancelled
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Greeting -->
+    <mj-section background-color="#ffffff" padding="40px 25px 20px">
+      <mj-column>
+        <mj-text font-size="18px" color="#333333" font-weight="bold">
+          Hi {{userName}},
+        </mj-text>
+        <mj-text font-size="16px" color="#555555" line-height="26px">
+          We're sorry to inform you that <strong>{{eventTitle}}</strong> has been cancelled. Your registration has been automatically cancelled and your spot released.
+        </mj:text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Cancelled Event Details Card -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#f9f9f9" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#dc3545" padding="0 0 15px 0">
+          📅 Cancelled Event Details
+        </mj-text>
+        <mj-text font-size="15px" line-height="28px">
+          <strong>Event:</strong> {{eventTitle}}<br/>
+          <strong>Was Scheduled:</strong> {{formatDate eventDate}} at {{eventTime}}<br/>
+          <strong>Location:</strong> {{eventLocation}}<br/>
+          <strong>Cancelled:</strong> {{formatDate cancelledAt}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Cancellation Reason -->
+    {{#if cancellationReason}}
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#fff3cd" border="2px solid #ffc107" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#333333" padding="0 0 15px 0">
+          Reason for Cancellation
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" line-height="24px">
+          {{cancellationReason}}
+        </mj-text>
+        {{#if organizerMessage}}
+        <mj-text font-size="14px" color="#666666" padding="15px 0 0 0">
+          <strong>Message from organizer:</strong><br/>
+          {{organizerMessage}}
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <!-- Rescheduled Information -->
+    {{#if rescheduled}}
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#d1ecf1" border="2px solid #17a2b8" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#0c5460" padding="0 0 15px 0">
+          ℹ️ Event Rescheduled
+        </mj-text>
+        <mj-text font-size="14px" color="#0c5460" line-height="24px">
+          Good news! This event has been rescheduled. {{#if autoReregister}}You've been automatically re-registered for the new date.{{else}}You'll need to register again for the rescheduled date.{{/if}}
+        </mj-text>
+        {{#if newEventDate}}
+        <mj-text font-size="15px" color="#0c5460" padding="15px 0 0 0">
+          <strong>New Date:</strong> {{formatDate newEventDate}}<br/>
+          <strong>New Time:</strong> {{newEventTime}}
+        </mj-text>
+        {{/if}}
+        {{#if newEventUrl}}
+        <mj-button href="{{newEventUrl}}" padding="20px 0 0 0" background-color="#17a2b8">
+          View Rescheduled Event
+        </mj-button>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <!-- Automatic Cancellation Notice -->
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column border-top="2px solid #f0f0f0" padding="30px 0 0 0">
+        <mj-text font-size="14px" color="#333333" font-weight="bold">
+          What This Means:
+        </mj-text>
+        <mj-text font-size="13px" color="#666666" line-height="22px">
+          • Your registration has been automatically cancelled<br/>
+          • Your QR code and ticket are no longer valid<br/>
+          • No further action is required from you<br/>
+          {{#if rescheduled}}• {{#if autoReregister}}You're registered for the new date{{else}}Register again for the rescheduled event{{/if}}{{/if}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Alternative Events -->
+    <mj-section background-color="#f9f9f9" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="16px" color="#333333" font-weight="bold" align="center">
+          Explore Other Events
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" align="center" padding="10px 0 20px 0">
+          We have many other exciting events you might enjoy
+        </mj-text>
+        <mj-button href="{{browseEventsUrl}}" align="center">
+          Browse Events
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Contact Organizer -->
+    {{#if showContactInfo}}
+    <mj-section background-color="#ffffff" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="14px" color="#333333" font-weight="bold" align="center">
+          Have Questions?
+        </mj-text>
+        <mj-text font-size="13px" color="#666666" align="center" padding="10px 0">
+          {{#if organizerEmail}}Contact the organizer: {{organizerEmail}}{{else}}Visit the event page for more information{{/if}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <!-- We're Sorry -->
+    <mj-section background-color="#ffffff" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="14px" color="#666666" align="center" line-height="24px">
+          We apologize for any inconvenience this cancellation may have caused. We hope to see you at another event soon!
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#333333" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="13px" line-height="22px">
+          <strong>Terrapin Events</strong><br/>
+          University of Maryland<br/>
+          College Park, MD 20742
+        </mj-text>
+        <mj-divider border-color="#555555" border-width="1px" padding="20px 0" />
+        <mj-text align="center" font-size="12px" color="#999999" line-height="20px">
+          You received this email because you were registered for this event.<br/>
+          <a href="{{preferencesUrl}}" style="color: #FFD520; text-decoration: none;">Notification Preferences</a> | 
+          <a href="{{unsubscribeUrl}}" style="color: #FFD520; text-decoration: none;">Unsubscribe</a> | 
+          <a href="{{supportUrl}}" style="color: #FFD520; text-decoration: none;">Support</a>
+        </mj-text>
+        <mj-text align="center" font-size="11px" color="#777777" padding="15px 0 0 0">
+          © {{currentYear}} University of Maryland. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>

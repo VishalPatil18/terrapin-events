@@ -1,0 +1,174 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{eventTitle}} - Tomorrow!</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="14px" color="#555555" line-height="24px" />
+      <mj-button background-color="#E03A3E" color="#ffffff" font-weight="bold" border-radius="4px" padding="12px 30px" />
+    </mj-attributes>
+    <mj-style>
+      .umd-red { color: #E03A3E; }
+      .umd-gold { color: #FFD520; }
+      .card { background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin: 10px 0; }
+    </mj-style>
+  </mj-head>
+  
+  <mj-body background-color="#f4f4f4">
+    
+    <!-- Header Section with UMD Branding -->
+    <mj-section background-color="#17a2b8" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="28px" font-weight="bold" padding="0">
+          ⏰ Event Tomorrow!
+        </mj-text>
+        <mj-text align="center" color="#ffffff" font-size="16px" padding="10px 0 0 0">
+          Terrapin Events
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Reminder Alert -->
+    <mj-section background-color="#d1ecf1" border="3px solid #17a2b8" padding="20px 25px">
+      <mj-column>
+        <mj-text font-size="16px" color="#0c5460" font-weight="bold" align="center">
+          📅 Your event is in 24 hours!
+        </mj-text>
+        <mj-text font-size="14px" color="#0c5460" align="center" padding="10px 0 0 0">
+          {{formatDate eventDate}} at {{eventTime}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Greeting -->
+    <mj-section background-color="#ffffff" padding="40px 25px 20px">
+      <mj-column>
+        <mj-text font-size="18px" color="#333333" font-weight="bold">
+          Hi {{userName}},
+        </mj-text>
+        <mj-text font-size="16px" color="#555555" line-height="26px">
+          This is a friendly reminder that <strong>{{eventTitle}}</strong> is happening tomorrow! We're looking forward to seeing you there.
+        </mj:text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Event Details Card -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#f9f9f9" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#E03A3E" padding="0 0 15px 0">
+          📅 Event Details
+        </mj-text>
+        <mj-text font-size="15px" line-height="28px">
+          <strong>Event:</strong> {{eventTitle}}<br/>
+          <strong>Date:</strong> {{formatDate eventDate}}<br/>
+          <strong>Time:</strong> {{eventTime}}<br/>
+          <strong>Location:</strong> {{eventLocation}}<br/>
+          {{#if eventRoom}}<strong>Room:</strong> {{eventRoom}}<br/>{{/if}}
+        </mj-text>
+        {{#if locationMapUrl}}
+        <mj-text font-size="14px" padding="15px 0 0 0">
+          <a href="{{locationMapUrl}}" style="color: #E03A3E; text-decoration: none;">📍 Get Directions</a>
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    <!-- Ticket Card with QR Code -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#fff9e6" border="2px solid #FFD520" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#333333" padding="0 0 15px 0" align="center">
+          🎟️ Your Ticket
+        </mj-text>
+        {{#if qrCodeUrl}}
+        <mj-text font-size="14px" color="#666666" align="center" padding="0 0 15px 0">
+          Have this QR code ready at check-in:
+        </mj-text>
+        <mj-image src="{{qrCodeUrl}}" alt="Event Check-in QR Code" width="250px" padding="10px 0" />
+        {{/if}}
+        <mj-text font-size="13px" line-height="24px" align="center">
+          <strong>Ticket #:</strong> {{ticketNumber}}<br/>
+          <strong>Registration ID:</strong> {{registrationId}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Quick Actions -->
+    <mj-section background-color="#ffffff" padding="0 25px 20px">
+      <mj-column>
+        <mj-button href="{{eventUrl}}" align="center">
+          View Event Details
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column>
+        <mj-button href="{{addToCalendarUrl}}" align="center" background-color="#ffffff" color="#E03A3E" border="2px solid #E03A3E">
+          Add to Calendar
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Preparation Checklist -->
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column border-top="2px solid #f0f0f0" padding="30px 0 0 0">
+        <mj-text font-size="16px" color="#333333" font-weight="bold">
+          📝 Before You Come:
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" line-height="24px">
+          ✓ Arrive 10-15 minutes early for check-in<br/>
+          ✓ Bring your student ID<br/>
+          ✓ Have this QR code ready (digital or printed)<br/>
+          {{#if requirements}}✓ {{requirements}}<br/>{{/if}}
+          ✓ Check parking information if driving
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Event Description -->
+    {{#if eventDescription}}
+    <mj-section background-color="#f9f9f9" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="16px" color="#333333" font-weight="bold">
+          About This Event:
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" line-height="24px" padding="10px 0 0 0">
+          {{eventDescription}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    {{/if}}
+
+    <!-- Need to Cancel -->
+    <mj-section background-color="#ffffff" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="14px" color="#666666" align="center">
+          Can't make it? Please cancel your registration so someone else can attend.
+        </mj-text>
+        <mj-text font-size="13px" color="#999999" align="center" padding="10px 0">
+          <a href="{{cancelUrl}}" style="color: #dc3545; text-decoration: none;">Cancel Registration</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#333333" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="13px" line-height="22px">
+          <strong>Terrapin Events</strong><br/>
+          University of Maryland<br/>
+          College Park, MD 20742
+        </mj-text>
+        <mj-divider border-color="#555555" border-width="1px" padding="20px 0" />
+        <mj-text align="center" font-size="12px" color="#999999" line-height="20px">
+          You're receiving this reminder because you're registered for this event.<br/>
+          <a href="{{preferencesUrl}}" style="color: #FFD520; text-decoration: none;">Notification Preferences</a> | 
+          <a href="{{supportUrl}}" style="color: #FFD520; text-decoration: none;">Support</a>
+        </mj-text>
+        <mj-text align="center" font-size="11px" color="#777777" padding="15px 0 0 0">
+          © {{currentYear}} University of Maryland. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>

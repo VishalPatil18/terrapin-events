@@ -157,6 +157,72 @@ resources:
           LambdaFunctionArn:
             Fn::ImportValue: ${self:provider.stage}-GetEventBySlugLambdaArn
 
+    # ==================== NOTIFICATION DATA SOURCES (Week 9) ====================
+    ListNotificationsDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: ListNotificationsDataSource
+        Description: Lambda data source for listing user notifications
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-ListNotificationsLambdaArn
+
+    MarkAsReadDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: MarkAsReadDataSource
+        Description: Lambda data source for marking notifications as read
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-MarkAsReadLambdaArn
+
+    GetPreferencesDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: GetPreferencesDataSource
+        Description: Lambda data source for getting notification preferences
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-GetPreferencesLambdaArn
+
+    UpdatePreferencesDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: UpdatePreferencesDataSource
+        Description: Lambda data source for updating notification preferences
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-UpdatePreferencesLambdaArn
+
+    MarkAllAsReadDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: MarkAllAsReadDataSource
+        Description: Lambda data source for marking all notifications as read
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-MarkAllAsReadLambdaArn
+
     # ==================== IAM ROLES ====================
     AppSyncLambdaRole:
       Type: AWS::IAM::Role
@@ -191,6 +257,18 @@ resources:
                     - Fn::ImportValue: ${self:provider.stage}-SearchEventsLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-GetCalendarEventsLambdaArn
                     - Fn::ImportValue: ${self:provider.stage}-GetEventBySlugLambdaArn
+                    # Additional Registration Lambdas
+                    - Fn::ImportValue: ${self:provider.stage}-GetRegistrationLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-CheckUserRegistrationLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-GetEventCapacityLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-AcceptPromotionLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-DeclinePromotionLambdaArn
+                    # Notification Lambdas (Week 9)
+                    - Fn::ImportValue: ${self:provider.stage}-ListNotificationsLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-MarkAsReadLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-MarkAllAsReadLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-GetPreferencesLambdaArn
+                    - Fn::ImportValue: ${self:provider.stage}-UpdatePreferencesLambdaArn
 
     # ==================== EVENT MUTATION RESOLVERS ====================
     CreateEventResolver:
@@ -374,6 +452,116 @@ resources:
         TypeName: Query
         FieldName: getEventBySlug
         DataSourceName: !GetAtt GetEventBySlugDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    # ==================== NOTIFICATION QUERY RESOLVERS (Week 9) ====================
+    ListNotificationsResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: listNotifications
+        DataSourceName: !GetAtt ListNotificationsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    GetNotificationPreferencesResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: getNotificationPreferences
+        DataSourceName: !GetAtt GetPreferencesDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    GetUnreadCountResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: getUnreadCount
+        DataSourceName: !GetAtt ListNotificationsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": {
+              "arguments": {
+                "unreadOnly": true,
+                "limit": 1
+              },
+              "identity": $util.toJson($context.identity)
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result.unreadCount)
+
+    # ==================== NOTIFICATION MUTATION RESOLVERS (Week 9) ====================
+    MarkNotificationAsReadResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: markNotificationAsRead
+        DataSourceName: !GetAtt MarkAsReadDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    UpdateNotificationPreferencesResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: updateNotificationPreferences
+        DataSourceName: !GetAtt UpdatePreferencesDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    MarkAllNotificationsAsReadResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: markAllNotificationsAsRead
+        DataSourceName: !GetAtt MarkAllAsReadDataSource.Name
         RequestMappingTemplate: |
           {
             "version": "2018-05-29",
