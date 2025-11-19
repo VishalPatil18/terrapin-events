@@ -14,7 +14,7 @@ import {
   RegistrationStatus,
   RegisterForEventInput,
   CancelRegistrationInput,
-  CheckInInput,
+  CheckInAttendeeInput,
   ListRegistrationsInput,
   EventCapacityInfo,
   RegistrationStats,
