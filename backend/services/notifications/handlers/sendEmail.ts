@@ -68,8 +68,8 @@ export async function handler(
     );
 
     if (!result.success) {
-      const errorMessage = typeof result.error === 'string' 
-        ? result.error 
+      const errorMessage = typeof result.error === 'string'
+        ? result.error
         : result.error?.message || 'Failed to send email';
       throw new Error(errorMessage);
     }
