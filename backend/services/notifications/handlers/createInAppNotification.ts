@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 import {
   NotificationType,
   NotificationPriority,
-  CreateInAppNotificationRequest,
+  CreateInAppNotificationInput,
 } from '../types/notification.types';
 
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -27,12 +27,12 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
  * GSI1SK: NOTIFICATION#{timestamp}#{notificationId}
  */
 export const handler = async (
-  request: CreateInAppNotificationRequest,
+  request: CreateInAppNotificationInput,
   context: Context
-): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+): Promise<{ success: boolean; notificationId?: string; error?: string }> => {
   console.log('Creating in-app notification:', JSON.stringify(request, null, 2));
 
-  const { userId, notificationType, priority, data, metadata } = request;
+  const { userId, type, priority, data, metadata } = request;
 
   try {
     const notificationId = nanoid();
@@ -48,11 +48,11 @@ export const handler = async (
       
       notificationId,
       userId,
-      type: notificationType,
+      type: NotificationType,
       priority,
       
-      title: getNotificationTitle(notificationType, data),
-      message: getNotificationMessage(notificationType, data),
+      title: getNotificationTitle(type, data),
+      message: getNotificationMessage(type, data),
       actionUrl: data.eventUrl,
       
       read: false,
@@ -85,7 +85,7 @@ export const handler = async (
             Detail: JSON.stringify({
               notificationId,
               userId,
-              type: notificationType,
+              type: NotificationType,
               priority,
               title: notification.title,
               message: notification.message,

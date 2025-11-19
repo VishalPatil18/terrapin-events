@@ -1,9 +1,9 @@
 import { Context } from 'aws-lambda';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import { sesClient } from '../lib/email/sesClient';
-import { templateRenderer } from '../lib/email/templateRenderer';
-import { deliveryTracker } from '../lib/email/deliveryTracker';
-import { retryHandler } from '../lib/retry/retryHandler';
+import sesClient from '../lib/email/sesClient';
+import templateRenderer from '../lib/email/templateRenderer';
+import deliveryTracker from '../lib/email/deliveryTracker';
+import retryHandler from '../lib/retry/retryHandler';
 import {
   NotificationType,
   NotificationPriority,
@@ -26,7 +26,7 @@ const RETRY_QUEUE_URL = process.env.RETRY_QUEUE_URL!;
 export const handler = async (
   request: SendEmailRequest,
   context: Context
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string }> => {
   console.log('Sending email notification:', JSON.stringify(request, null, 2));
 
   const {

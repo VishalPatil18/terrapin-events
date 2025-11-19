@@ -1,5 +1,5 @@
 import { Context } from 'aws-lambda';
-import { preferencesManager } from '../lib/preferences/preferencesManager';
+import preferencesManager from '../lib/preferences/preferencesManager';
 import { NotificationPreferences } from '../types/notification.types';
 
 interface GetPreferencesRequest {
@@ -21,7 +21,7 @@ interface GetPreferencesResponse {
 export const handler = async (
   event: { arguments: GetPreferencesRequest },
   context: Context
-): Promise<GetPreferencesResponse> {
+): Promise<GetPreferencesResponse> => {
   const { userId } = event.arguments;
 
   console.log('Getting notification preferences:', { userId });

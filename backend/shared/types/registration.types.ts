@@ -78,7 +78,7 @@ export interface RateLimitRecord {
 
 // Email notification types
 export interface EmailNotificationPayload {
-  type: 'REGISTRATION_CONFIRMED' | 'WAITLIST_ADDED' | 'WAITLIST_PROMOTED' | 'REGISTRATION_CANCELLED';
+  type: 'REGISTRATION_CONFIRMATION' | 'WAITLIST_ADDED' | 'WAITLIST_PROMOTED' | 'REGISTRATION_CANCELLED';
   recipientEmail: string;
   recipientName: string;
   eventTitle: string;

@@ -32,7 +32,7 @@ interface MarkAsReadResponse {
 export const handler = async (
   event: { arguments: MarkAsReadRequest },
   context: Context
-): Promise<MarkAsReadResponse> {
+): Promise<MarkAsReadResponse> => {
   const { userId, notificationId } = event.arguments;
 
   console.log('Marking notification as read:', { userId, notificationId });

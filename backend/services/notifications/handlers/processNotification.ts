@@ -1,8 +1,8 @@
 import { EventBridgeEvent, Context } from 'aws-lambda';
 import { sendEmail } from './sendEmail';
-import { createInAppNotification } from './createInAppNotification';
-import { preferencesManager } from '../lib/preferences/preferencesManager';
-import { doNotDisturbChecker } from '../lib/preferences/doNotDisturbChecker';
+import createInAppNotification from './createInAppNotification';
+import preferencesManager from '../lib/preferences/preferencesManager';
+import doNotDisturbChecker from '../lib/preferences/doNotDisturbChecker';
 import {
   NotificationEvent,
   NotificationType,

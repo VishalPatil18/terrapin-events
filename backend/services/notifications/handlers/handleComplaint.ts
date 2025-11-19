@@ -1,6 +1,6 @@
 import { SNSEvent, Context } from 'aws-lambda';
-import { deliveryTracker } from '../lib/email/deliveryTracker';
-import { preferencesManager } from '../lib/preferences/preferencesManager';
+import deliveryTracker from '../lib/email/deliveryTracker';
+import preferencesManager from '../lib/preferences/preferencesManager';
 
 /**
  * Handle SES complaint notifications via SNS

@@ -15,7 +15,7 @@
  * Types of notifications sent to users
  */
 export enum NotificationType {
-  REGISTRATION_CONFIRMED = 'REGISTRATION_CONFIRMED',
+  REGISTRATION_CONFIRMATION = 'REGISTRATION_CONFIRMATION',
   WAITLIST_ADDED = 'WAITLIST_ADDED',
   WAITLIST_PROMOTED = 'WAITLIST_PROMOTED',
   REGISTRATION_CANCELLED = 'REGISTRATION_CANCELLED',
@@ -59,6 +59,7 @@ export enum NotificationFrequency {
  */
 export enum NotificationPriority {
   HIGH = 'HIGH',
+  MEDIUM = 'MEDIUM',
   NORMAL = 'NORMAL',
   LOW = 'LOW',
 }
@@ -103,9 +104,8 @@ export interface InAppNotification {
 export interface CreateInAppNotificationInput {
   userId: string;
   type: NotificationType;
-  title: string;
-  message: string;
-  actionUrl?: string;
+  priority: NotificationPriority;
+  data: Record<string, any>;
   metadata?: Record<string, any>;
 }
 
@@ -129,7 +129,7 @@ export interface NotificationPreferences {
   
   // Granular control per notification type
   enabledTypes: {
-    [NotificationType.REGISTRATION_CONFIRMED]: boolean;
+    [NotificationType.REGISTRATION_CONFIRMATION]: boolean;
     [NotificationType.WAITLIST_ADDED]: boolean;
     [NotificationType.WAITLIST_PROMOTED]: boolean;
     [NotificationType.REGISTRATION_CANCELLED]: boolean;
@@ -175,7 +175,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Omit<NotificationPreferences, 'PK
   inAppEnabled: true,
   frequency: NotificationFrequency.IMMEDIATE,
   enabledTypes: {
-    [NotificationType.REGISTRATION_CONFIRMED]: true,
+    [NotificationType.REGISTRATION_CONFIRMATION]: true,
     [NotificationType.WAITLIST_ADDED]: true,
     [NotificationType.WAITLIST_PROMOTED]: true,
     [NotificationType.REGISTRATION_CANCELLED]: true,
