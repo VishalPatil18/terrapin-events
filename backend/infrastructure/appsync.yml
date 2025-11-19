@@ -483,6 +483,27 @@ resources:
         ResponseMappingTemplate: |
           $util.toJson($ctx.result)
 
+    # Field Resolver: Event.organizer
+    # Resolves the organizer User field when querying an event
+    EventOrganizerResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Event
+        FieldName: organizer
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.source.organizerId"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
   Outputs:
     GraphQLApiId:
       Value: !GetAtt GraphQLApi.ApiId
