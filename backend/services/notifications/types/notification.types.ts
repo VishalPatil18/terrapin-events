@@ -48,10 +48,19 @@ export enum DeliveryStatus {
 /**
  * Notification frequency preferences
  */
-export enum NotificationFrequency {
-  IMMEDIATE = 'IMMEDIATE',
-  DAILY_DIGEST = 'DAILY_DIGEST',
-  WEEKLY_DIGEST = 'WEEKLY_DIGEST',
+
+// Represents the digest schedule config
+export type DigestFrequency = 'daily' | 'weekly';
+
+export interface BatchNotificationSettings {
+  enabled: boolean;
+  intervalMinutes?: number;
+}
+
+export interface NotificationFrequency {
+  digestEnabled: boolean;
+  digestFrequency?: DigestFrequency;
+  batchNotifications?: BatchNotificationSettings;
 }
 
 /**
@@ -173,7 +182,14 @@ export interface UpdateNotificationPreferencesInput {
 export const DEFAULT_NOTIFICATION_PREFERENCES: Omit<NotificationPreferences, 'PK' | 'SK' | 'userId' | 'unsubscribeToken' | 'createdAt' | 'updatedAt'> = {
   emailEnabled: true,
   inAppEnabled: true,
-  frequency: NotificationFrequency.IMMEDIATE,
+  frequency: {
+     digestEnabled: true,
+     digestFrequency: 'daily', // or 'weekly' or undefined
+     batchNotifications: {
+       enabled: true,
+       intervalMinutes: 60, // example: every 60 minutes
+     },
+ },
   enabledTypes: {
     [NotificationType.REGISTRATION_CONFIRMATION]: true,
     [NotificationType.WAITLIST_ADDED]: true,

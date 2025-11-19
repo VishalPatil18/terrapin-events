@@ -1,6 +1,6 @@
 import { EventBridgeEvent, Context } from 'aws-lambda';
 import { sendEmail } from './sendEmail';
-import createInAppNotification from './createInAppNotification';
+import { createInAppNotification } from './createInAppNotification';
 import preferencesManager from '../lib/preferences/preferencesManager';
 import doNotDisturbChecker from '../lib/preferences/doNotDisturbChecker';
 import {
@@ -56,7 +56,7 @@ export const handler = async (
           
           // Check if user wants this notification type
           const typeKey = getPreferenceKey(notificationType);
-          if (!preferences.types[typeKey]) {
+          if (!preferences.enabledTypes[typeKey]) {
             console.log(`User ${recipient.userId} has disabled ${notificationType} notifications`);
             return;
           }
@@ -67,8 +67,7 @@ export const handler = async (
           // Check Do Not Disturb hours (skip for high priority)
           if (priority !== NotificationPriority.HIGH) {
             const dndCheck = doNotDisturbChecker.isInDoNotDisturbPeriod(
-              preferences.doNotDisturb,
-              recipient.timezone || 'America/New_York'
+              preferences
             );
             
             if (dndCheck.isInDND) {
@@ -100,7 +99,7 @@ export const handler = async (
                   data: notificationData,
                   metadata: {
                     eventId: detail.eventId,
-                    requestId: context.requestId,
+                    requestId: context.awsRequestId,
                   },
                 },
                 context
@@ -119,7 +118,7 @@ export const handler = async (
                   data: notificationData,
                   metadata: {
                     eventId: detail.eventId,
-                    requestId: context.requestId,
+                    requestId: context.awsRequestId,
                   },
                 },
                 context

@@ -17,16 +17,21 @@ import { getPreferences } from './preferencesManager';
  * @param currentTime - Optional current time (for testing)
  * @returns Boolean indicating if in DND period
  */
+
+ interface DNDCheckResult {
+   isInDND: boolean;
+   nextAvailableTime?: Date;
+ }
+
 export function isInDoNotDisturbPeriod(
-  preferences: NotificationPreferences,
-  currentTime?: Date
-): boolean {
+  preferences: NotificationPreferences
+): DNDCheckResult {
   // If DND is not enabled, return false
   if (!preferences.doNotDisturb.enabled) {
-    return false;
+    return { isInDND: false };
   }
 
-  const now = currentTime || new Date();
+  const now = new Date();
   const { startHour, endHour, timezone } = preferences.doNotDisturb;
 
   try {
@@ -46,24 +51,40 @@ export function isInDoNotDisturbPeriod(
     const startTimeInMinutes = startH * 60 + startM;
     const endTimeInMinutes = endH * 60 + endM;
 
-    // Check if DND period crosses midnight (e.g., 22:00 - 08:00)
+    let isInDND = false;
+
+    // Check if DND crosses midnight (e.g., 22:00–08:00)
     if (startTimeInMinutes > endTimeInMinutes) {
-      // DND crosses midnight: check if current time is after start OR before end
-      return (
+      isInDND =
         currentTimeInMinutes >= startTimeInMinutes ||
-        currentTimeInMinutes < endTimeInMinutes
-      );
+        currentTimeInMinutes < endTimeInMinutes;
     } else {
-      // DND doesn't cross midnight: check if current time is between start and end
-      return (
+      isInDND =
         currentTimeInMinutes >= startTimeInMinutes &&
-        currentTimeInMinutes < endTimeInMinutes
-      );
+        currentTimeInMinutes < endTimeInMinutes;
     }
+
+    if (!isInDND) {
+      return { isInDND: false };
+    }
+
+    // Calculate next available time
+    const nextAvailableTime = new Date(userTime);
+    nextAvailableTime.setHours(endH, endM, 0, 0);
+
+    // If DND crosses midnight and we're after start, push end to tomorrow
+    if (startTimeInMinutes > endTimeInMinutes &&
+        currentTimeInMinutes >= startTimeInMinutes) {
+      nextAvailableTime.setDate(nextAvailableTime.getDate() + 1);
+    }
+
+    return {
+      isInDND: true,
+      nextAvailableTime,
+    };
   } catch (error) {
     console.error('Error checking DND period:', error);
-    // If there's an error parsing timezone or time, default to allowing notification
-    return false;
+    return { isInDND: false };
   }
 }
 
@@ -81,7 +102,7 @@ export function getNextAvailableTime(
   const now = currentTime || new Date();
 
   // If DND is not enabled or not currently in DND, return current time
-  if (!preferences.doNotDisturb.enabled || !isInDoNotDisturbPeriod(preferences, now)) {
+  if (!preferences.doNotDisturb.enabled || !isInDoNotDisturbPeriod(preferences)) {
     return now;
   }
 
@@ -158,7 +179,7 @@ export async function shouldSendNotification(
   }
 
   // Check DND for regular priority notifications
-  return !isInDoNotDisturbPeriod(preferences, currentTime);
+  return !isInDoNotDisturbPeriod(preferences);
 }
 
 /**

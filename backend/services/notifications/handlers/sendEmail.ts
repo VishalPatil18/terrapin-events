@@ -50,19 +50,21 @@ export const handler = async (
     );
 
     // Send email via SES
-    const result = await sesClient.sendEmail({
-      to: [email],
+    const result = await sesClient.sendEmail(
+      [email],
       subject,
-      htmlBody: html,
-      textBody: text,
-      replyTo: process.env.SES_REPLY_TO_EMAIL,
-      tags: {
-        NotificationType: notificationType,
-        Priority: priority,
-        EventId: metadata.eventId,
-        UserId: userId,
-      },
-    });
+      html,
+      text,
+      {
+          replyTo: process.env.SES_REPLY_TO_EMAIL,
+          tags: {
+            NotificationType: notificationType,
+            Priority: priority,
+            EventId: metadata.eventId,
+            UserId: userId,
+          },
+      }
+    );
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to send email');
@@ -110,7 +112,7 @@ export const handler = async (
 
     if (shouldRetry) {
       // Calculate next retry time
-      const nextRetryAt = retryHandler.calculateNextRetry(attempt);
+      const nextRetryAt = retryHandler.calculateNextRetryTime(attempt);
 
       console.log(`Queueing for retry (attempt ${attempt + 1}) at ${nextRetryAt.toISOString()}`);
 

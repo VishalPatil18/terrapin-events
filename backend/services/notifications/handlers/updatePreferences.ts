@@ -60,13 +60,13 @@ export const handler = async (
 function validatePreferences(preferences: Partial<NotificationPreferences>): void {
   // Validate DND times if provided
   if (preferences.doNotDisturb) {
-    const { startTime, endTime } = preferences.doNotDisturb;
+    const { startHour, endHour } = preferences.doNotDisturb;
     
-    if (startTime && !isValidTime(startTime)) {
+    if (startHour && !isValidTime(startHour)) {
       throw new Error('Invalid DND start time format. Use HH:MM');
     }
     
-    if (endTime && !isValidTime(endTime)) {
+    if (endHour && !isValidTime(endHour)) {
       throw new Error('Invalid DND end time format. Use HH:MM');
     }
   }

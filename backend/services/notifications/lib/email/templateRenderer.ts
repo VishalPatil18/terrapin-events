@@ -20,6 +20,7 @@ export interface TemplateRenderResult {
   success: boolean;
   html?: string;
   text?: string;
+  subject?: string;
   error?: string;
 }
 

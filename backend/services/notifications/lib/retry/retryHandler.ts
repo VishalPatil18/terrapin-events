@@ -116,7 +116,7 @@ export async function executeWithRetry<T>(
   for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
     try {
       return await fn();
-    } catch (error) {
+    } catch (error: any) {
       lastError = error;
 
       // Check if we should retry
@@ -166,7 +166,7 @@ export async function executeWithRetryTracking<T>(
     try {
       const result = await fn();
       return { result, attempts, errors };
-    } catch (error) {
+    } catch (error:any) {
       errors.push({
         attempt,
         error: error.message || String(error),
