@@ -58,7 +58,6 @@ export async function handler(
           ':waitlisted': RegistrationStatus.WAITLISTED,
           ':pending': RegistrationStatus.PROMOTION_PENDING,
         },
-        Limit: 1,
       })
     );
 

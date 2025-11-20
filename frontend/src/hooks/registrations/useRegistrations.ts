@@ -293,60 +293,35 @@ export function useEventRegistration(eventId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!eventId) {
       setRegistration(null);
       setIsRegistered(false);
       return;
     }
 
-    const checkRegistration = async () => {
-      try {
-        setIsLoading(true);
-        const data = await registrationsAPI.checkUserRegistration(eventId);
-        setRegistration(data);
-        // Only set isRegistered to true for active statuses
-        const activeStatuses = [
-          RegistrationStatus.REGISTERED,
-          RegistrationStatus.WAITLISTED,
-          RegistrationStatus.PROMOTION_PENDING,
-        ];
-        setIsRegistered(!!data && activeStatuses.includes(data.status));
-      } catch (err) {
-        console.error('Error checking registration:', err);
-        setRegistration(null);
-        setIsRegistered(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkRegistration();
+    setIsLoading(true);
+    try {
+      const data = await registrationsAPI.checkUserRegistration(eventId);
+      setRegistration(data);
+      const activeStatuses = [
+        RegistrationStatus.REGISTERED,
+        RegistrationStatus.WAITLISTED,
+        RegistrationStatus.PROMOTION_PENDING,
+      ];
+      setIsRegistered(!!data && activeStatuses.includes(data.status));
+    } catch (err) {
+      console.error('Error checking/refreshing registration:', err);
+      setRegistration(null);
+      setIsRegistered(false);
+    } finally {
+      setIsLoading(false);
+    }
   }, [eventId]);
 
-  /**
-   * Refresh registration status
-   */
-  const refresh = useCallback(() => {
-    if (!eventId) return;
-    
-    registrationsAPI.checkUserRegistration(eventId)
-      .then(data => {
-        setRegistration(data);
-        // Only set isRegistered to true for active statuses
-        const activeStatuses = [
-          RegistrationStatus.REGISTERED,
-          RegistrationStatus.WAITLISTED,
-          RegistrationStatus.PROMOTION_PENDING,
-        ];
-        setIsRegistered(!!data && activeStatuses.includes(data.status));
-      })
-      .catch(err => {
-        console.error('Error refreshing registration:', err);
-        setRegistration(null);
-        setIsRegistered(false);
-      });
-  }, [eventId]);
+  useEffect(() => {
+    refresh();
+  }, [eventId, refresh]);
 
   return {
     registration,
@@ -355,6 +330,7 @@ export function useEventRegistration(eventId: string | null) {
     refresh,
   };
 }
+
 
 /**
  * Hook for event capacity information

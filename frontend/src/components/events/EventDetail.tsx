@@ -29,24 +29,7 @@ export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
   // Registration hooks
   const { register, cancel, isLoading, error, success, clearMessages } = useRegistrationActions();
   const { registration, isRegistered, isLoading: isCheckingRegistration, refresh: refreshRegistration } = useEventRegistration(event.id);
-
-  // Enhanced Debug logging
-  console.log('=== EventDetail Debug ===');
-  console.log('Event ID:', event.id);
-  console.log('User ID:', user?.userId);
-  console.log('Is Organizer:', isOrganizer);
-  console.log('Is Full:', isFull);
-  console.log('Available Seats:', availableSeats);
-  console.log('isCheckingRegistration:', isCheckingRegistration);
-  console.log('isRegistered:', isRegistered);
-  console.log('Registration Object:', registration);
-  console.log('Registration Status:', registration?.status);
-  console.log('Waitlist Position:', registration?.waitlistPosition);
-  console.log('======================');
   
-  // Debug state to show in UI
-  const [showDebug, setShowDebug] = useState(false);
-
   // Force refresh when event ID changes
   useEffect(() => {
     refreshRegistration();
@@ -61,11 +44,9 @@ export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
   const handleRegister = async () => {
     const result = await register(event.id);
     if (result) {
-      // Refresh both registration status and event data
-      await Promise.all([
-        refreshRegistration(),
-        onEventUpdate?.(),
-      ]);
+      // Refresh registration status first, then event data to avoid race conditions
+      await refreshRegistration();
+      await onEventUpdate?.();
     }
   };
 
@@ -78,11 +59,9 @@ export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
     
     const success = await cancel(registration.id);
     if (success) {
-      // Refresh both registration status and event data
-      await Promise.all([
-        refreshRegistration(),
-        onEventUpdate?.(),
-      ]);
+      // Refresh registration status first, then event data to avoid race conditions
+      await refreshRegistration();
+      await onEventUpdate?.();
     }
   };
 
@@ -92,30 +71,6 @@ export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
 
   return (
     <div className="space-y-8">
-      {/* Debug Panel - Remove in production */}
-      <button
-        onClick={() => setShowDebug(!showDebug)}
-        className="fixed bottom-4 right-4 z-50 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-700"
-      >
-        {showDebug ? 'Hide' : 'Show'} Debug
-      </button>
-      {showDebug && (
-        <div className="fixed bottom-16 right-4 z-50 bg-white border-2 border-gray-800 rounded-lg p-4 shadow-xl max-w-md text-xs">
-          <h3 className="font-bold mb-2">Debug Info</h3>
-          <div className="space-y-1">
-            <p><strong>Event ID:</strong> {event.id}</p>
-            <p><strong>User ID:</strong> {user?.userId || 'Not logged in'}</p>
-            <p><strong>Is Organizer:</strong> {isOrganizer ? 'Yes' : 'No'}</p>
-            <p><strong>Is Full:</strong> {isFull ? 'Yes' : 'No'}</p>
-            <p><strong>Available Seats:</strong> {availableSeats}</p>
-            <p><strong>Checking Registration:</strong> {isCheckingRegistration ? 'Yes' : 'No'}</p>
-            <p><strong>Is Registered:</strong> {isRegistered ? 'Yes' : 'No'}</p>
-            <p><strong>Registration ID:</strong> {registration?.id || 'None'}</p>
-            <p><strong>Registration Status:</strong> {registration?.status || 'None'}</p>
-            <p><strong>Waitlist Position:</strong> {registration?.waitlistPosition || 'N/A'}</p>
-          </div>
-        </div>
-      )}
       {/* Hero Image with Title Overlay */}
       <div className="relative h-96 rounded-xl overflow-hidden bg-gray-200">
         {imageUrl && (
@@ -378,8 +333,7 @@ export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
                 <button
                   onClick={handleRegister}
                   disabled={isLoading}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                    isFull
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${                    isFull
                       ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                       : 'bg-[#A20B23] hover:bg-[#8A0A1E] text-white'
                   }`}

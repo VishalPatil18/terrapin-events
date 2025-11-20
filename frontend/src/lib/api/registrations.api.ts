@@ -164,7 +164,7 @@ export async function getRegistrationStats(): Promise<RegistrationStats> {
 
 /**
  * Check if user is registered for an event
- * Returns null if not registered
+ * Returns null if not registered or if registration is cancelled
  */
 export async function checkUserRegistration(eventId: string): Promise<Registration | null> {
   try {
@@ -172,13 +172,19 @@ export async function checkUserRegistration(eventId: string): Promise<Registrati
     const result = (await client.graphql({
       query: CHECK_USER_REGISTRATION,
       variables: { eventId },
-      // Force network-only fetch policy to bypass cache
       authMode: 'userPool',
     })) as GraphQLResult<{ checkUserRegistration: Registration | null }>;
     
-    console.log('[API] checkUserRegistration result:', result.data?.checkUserRegistration);
+    const registration = result.data?.checkUserRegistration;
+    console.log('[API] checkUserRegistration result:', registration);
 
-    return result.data?.checkUserRegistration || null;
+    // If registration exists but is cancelled, treat as not registered
+    if (registration && registration.status === RegistrationStatus.CANCELLED) {
+      console.log('[API] Registration is CANCELLED, returning null.');
+      return null;
+    }
+
+    return registration || null;
   } catch (error: unknown) {
     // Not found is expected, return null instead of throwing
     if ((error as any).errors?.[0]?.extensions?.code === 'NOT_FOUND') {
