@@ -168,10 +168,15 @@ export async function getRegistrationStats(): Promise<RegistrationStats> {
  */
 export async function checkUserRegistration(eventId: string): Promise<Registration | null> {
   try {
+    console.log('[API] Checking user registration for event:', eventId);
     const result = (await client.graphql({
       query: CHECK_USER_REGISTRATION,
       variables: { eventId },
+      // Force network-only fetch policy to bypass cache
+      authMode: 'userPool',
     })) as GraphQLResult<{ checkUserRegistration: Registration | null }>;
+    
+    console.log('[API] checkUserRegistration result:', result.data?.checkUserRegistration);
 
     return result.data?.checkUserRegistration || null;
   } catch (error: unknown) {

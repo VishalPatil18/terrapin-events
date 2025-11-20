@@ -136,6 +136,7 @@ enum UserRole {
 enum RegistrationStatus {
   REGISTERED
   WAITLISTED
+  PROMOTION_PENDING
   ATTENDED
   NO_SHOW
   CANCELLED

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Users, Tag, ExternalLink, Loader2 } from 'lucide-react';
 import { Event, formatEventDateTime, getAvailableSeats, isEventFull, getEventCategoryLabel } from '@/types/event.types';
 import { useRegistrationActions, useEventRegistration } from '@/hooks/registrations/useRegistrations';
@@ -14,9 +14,10 @@ import { Alert } from '@/components/ui/Alert';
 
 export interface EventDetailProps {
   event: Event;
+  onEventUpdate?: () => void | Promise<void>;
 }
 
-export function EventDetail({ event }: EventDetailProps) {
+export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
   const availableSeats = getAvailableSeats(event);
   const isFull = isEventFull(event);
   const imageUrl = event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/400`;
@@ -27,7 +28,29 @@ export function EventDetail({ event }: EventDetailProps) {
 
   // Registration hooks
   const { register, cancel, isLoading, error, success, clearMessages } = useRegistrationActions();
-  const { registration, isRegistered, refresh: refreshRegistration } = useEventRegistration(event.id);
+  const { registration, isRegistered, isLoading: isCheckingRegistration, refresh: refreshRegistration } = useEventRegistration(event.id);
+
+  // Enhanced Debug logging
+  console.log('=== EventDetail Debug ===');
+  console.log('Event ID:', event.id);
+  console.log('User ID:', user?.userId);
+  console.log('Is Organizer:', isOrganizer);
+  console.log('Is Full:', isFull);
+  console.log('Available Seats:', availableSeats);
+  console.log('isCheckingRegistration:', isCheckingRegistration);
+  console.log('isRegistered:', isRegistered);
+  console.log('Registration Object:', registration);
+  console.log('Registration Status:', registration?.status);
+  console.log('Waitlist Position:', registration?.waitlistPosition);
+  console.log('======================');
+  
+  // Debug state to show in UI
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Force refresh when event ID changes
+  useEffect(() => {
+    refreshRegistration();
+  }, [event.id, refreshRegistration]);
 
   // Format hours if needed (placeholder - would come from backend)
   const eventHours = {
@@ -38,8 +61,11 @@ export function EventDetail({ event }: EventDetailProps) {
   const handleRegister = async () => {
     const result = await register(event.id);
     if (result) {
-      // Refresh registration status
-      refreshRegistration();
+      // Refresh both registration status and event data
+      await Promise.all([
+        refreshRegistration(),
+        onEventUpdate?.(),
+      ]);
     }
   };
 
@@ -52,7 +78,11 @@ export function EventDetail({ event }: EventDetailProps) {
     
     const success = await cancel(registration.id);
     if (success) {
-      refreshRegistration();
+      // Refresh both registration status and event data
+      await Promise.all([
+        refreshRegistration(),
+        onEventUpdate?.(),
+      ]);
     }
   };
 
@@ -62,6 +92,30 @@ export function EventDetail({ event }: EventDetailProps) {
 
   return (
     <div className="space-y-8">
+      {/* Debug Panel - Remove in production */}
+      <button
+        onClick={() => setShowDebug(!showDebug)}
+        className="fixed bottom-4 right-4 z-50 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-700"
+      >
+        {showDebug ? 'Hide' : 'Show'} Debug
+      </button>
+      {showDebug && (
+        <div className="fixed bottom-16 right-4 z-50 bg-white border-2 border-gray-800 rounded-lg p-4 shadow-xl max-w-md text-xs">
+          <h3 className="font-bold mb-2">Debug Info</h3>
+          <div className="space-y-1">
+            <p><strong>Event ID:</strong> {event.id}</p>
+            <p><strong>User ID:</strong> {user?.userId || 'Not logged in'}</p>
+            <p><strong>Is Organizer:</strong> {isOrganizer ? 'Yes' : 'No'}</p>
+            <p><strong>Is Full:</strong> {isFull ? 'Yes' : 'No'}</p>
+            <p><strong>Available Seats:</strong> {availableSeats}</p>
+            <p><strong>Checking Registration:</strong> {isCheckingRegistration ? 'Yes' : 'No'}</p>
+            <p><strong>Is Registered:</strong> {isRegistered ? 'Yes' : 'No'}</p>
+            <p><strong>Registration ID:</strong> {registration?.id || 'None'}</p>
+            <p><strong>Registration Status:</strong> {registration?.status || 'None'}</p>
+            <p><strong>Waitlist Position:</strong> {registration?.waitlistPosition || 'N/A'}</p>
+          </div>
+        </div>
+      )}
       {/* Hero Image with Title Overlay */}
       <div className="relative h-96 rounded-xl overflow-hidden bg-gray-200">
         {imageUrl && (
@@ -288,6 +342,12 @@ export function EventDetail({ event }: EventDetailProps) {
                   <p className="text-sm font-medium text-blue-900">
                     You are the organizer of this event
                   </p>
+                </div>
+              ) : isCheckingRegistration ? (
+                // Loading registration status
+                <div className="w-full py-3 px-4 rounded-lg bg-gray-100 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                  <span className="text-sm text-gray-600">Checking registration status...</span>
                 </div>
               ) : isRegistered && registration ? (
                 // User is registered - show cancel button
