@@ -15,8 +15,8 @@ provider:
     DYNAMODB_TABLE_NAME:
       Fn::ImportValue: ${self:provider.stage}-TemsTableName
     EVENT_BUS_NAME: ${self:custom.eventBusName}
-    SES_FROM_EMAIL: noreply@terrapinevents.umd.edu
-    SES_REPLY_TO_EMAIL: support@terrapinevents.umd.edu
+    SES_FROM_EMAIL: shangonade@hmail.com
+    SES_REPLY_TO_EMAIL: shangonade@hmail.com
     SES_CONFIGURATION_SET: tems-email-tracking-${self:provider.stage}
     NODE_ENV: ${self:provider.stage}
     # Queue URLs - using CloudFormation Refs
