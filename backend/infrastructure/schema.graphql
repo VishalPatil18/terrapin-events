@@ -41,9 +41,11 @@ type Registration {
   id: ID!
   userId: ID!
   eventId: ID!
+  event: Event  # Related event details
   status: RegistrationStatus!
   qrCode: String!
   waitlistPosition: Int
+  promotionDeadline: AWSDateTime
   registeredAt: AWSDateTime!
   attendedAt: AWSDateTime
 }
@@ -79,6 +81,16 @@ type SearchFacets {
 type FacetCount {
   value: String!
   count: Int!
+}
+
+# Event Capacity Info Type
+type EventCapacityInfo {
+  eventId: ID!
+  capacity: Int!
+  registeredCount: Int!
+  waitlistCount: Int!
+  availableSeats: Int!
+  isFull: Boolean!
 }
 
 # Location Type
@@ -124,6 +136,7 @@ enum UserRole {
 enum RegistrationStatus {
   REGISTERED
   WAITLISTED
+  PROMOTION_PENDING
   ATTENDED
   NO_SHOW
   CANCELLED
@@ -157,6 +170,8 @@ type Query {
   # Registrations
   getRegistration(id: ID!): Registration
   listMyRegistrations: [Registration!]!
+  checkUserRegistration(eventId: ID!): Registration
+  getEventCapacity(eventId: ID!): EventCapacityInfo!
 }
 
 # Mutations
@@ -168,8 +183,10 @@ type Mutation {
   publishEvent(id: ID!): Event!
   
   # Registrations
-  registerForEvent(eventId: ID!): Registration!
-  cancelRegistration(id: ID!): Registration!
+  registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
+  cancelRegistration(registrationId: ID!): Registration!
+  acceptPromotion(id: ID!): Registration!
+  declinePromotion(id: ID!): Registration!
   checkInAttendee(registrationId: ID!): Registration!
   
   # Users
