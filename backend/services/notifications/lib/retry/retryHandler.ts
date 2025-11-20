@@ -128,7 +128,7 @@ export async function executeWithRetry<T>(
         );
 
         console.log(`Attempt ${attempt} failed, retrying in ${delayMs}ms...`, {
-          error: error.message,
+          error: (error as Error).message || String(error),
           nextAttempt: attempt + 1,
         });
 
@@ -169,7 +169,7 @@ export async function executeWithRetryTracking<T>(
     } catch (error:any) {
       errors.push({
         attempt,
-        error: error.message || String(error),
+        error: (error as Error).message || String(error),
         timestamp: new Date().toISOString(),
       });
 
@@ -329,9 +329,9 @@ export function createRetryMessage(
     notificationId,
     attempt,
     error: {
-      code: error.code || error.name || 'UnknownError',
-      message: error.message || String(error),
-      stack: error.stack,
+      code: error?.code || error?.name || 'UnknownError',
+      message: (error as Error)?.message || String(error),
+      stack: (error as Error)?.stack,
     },
     metadata,
     timestamp: new Date().toISOString(),
@@ -351,3 +351,7 @@ export default {
   calculateBackoffWithJitter,
   createRetryMessage,
 };
+
+// Aliases for common usage
+export const isRetryable = isRetryableError;
+export const calculateNextRetry = calculateNextRetryTime;

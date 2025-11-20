@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 import {
   NotificationType,
   NotificationPriority,
-  CreateInAppNotificationInput,
+  CreateInAppNotificationRequest,
 } from '../types/notification.types';
 
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -26,13 +26,13 @@ const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME!;
  * GSI1PK: USER#{userId}
  * GSI1SK: NOTIFICATION#{timestamp}#{notificationId}
  */
-export const handler = async (
-  request: CreateInAppNotificationInput,
+export async function handler(
+  event: CreateInAppNotificationRequest,
   context: Context
-): Promise<{ success: boolean; notificationId?: string; error?: string }> => {
-  console.log('Creating in-app notification:', JSON.stringify(request, null, 2));
+): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+  console.log('Creating in-app notification:', JSON.stringify(event, null, 2));
 
-  const { userId, type, priority, data, metadata } = request;
+  const { userId, notificationType, priority, data, metadata } = event;
 
   try {
     const notificationId = nanoid();
@@ -48,11 +48,11 @@ export const handler = async (
       
       notificationId,
       userId,
-      type: NotificationType,
+      type: notificationType,
       priority,
       
-      title: getNotificationTitle(type, data),
-      message: getNotificationMessage(type, data),
+      title: getNotificationTitle(notificationType, data),
+      message: getNotificationMessage(notificationType, data),
       actionUrl: data.eventUrl,
       
       read: false,
@@ -85,7 +85,7 @@ export const handler = async (
             Detail: JSON.stringify({
               notificationId,
               userId,
-              type: NotificationType,
+              type: notificationType,
               priority,
               title: notification.title,
               message: notification.message,
@@ -122,7 +122,7 @@ function getNotificationTitle(
   data: Record<string, any>
 ): string {
   const titles: Record<NotificationType, string> = {
-    [NotificationType.REGISTRATION_CONFIRMATION]: '✅ Registration Confirmed',
+    [NotificationType.REGISTRATION_CONFIRMED]: '✅ Registration Confirmed',
     [NotificationType.WAITLIST_ADDED]: '⏳ Added to Waitlist',
     [NotificationType.WAITLIST_PROMOTED]: '🎉 You Got a Spot!',
     [NotificationType.REGISTRATION_CANCELLED]: 'Registration Cancelled',
@@ -143,7 +143,7 @@ function getNotificationMessage(
   data: Record<string, any>
 ): string {
   const messages: Record<NotificationType, (data: any) => string> = {
-    [NotificationType.REGISTRATION_CONFIRMATION]: (d) =>
+    [NotificationType.REGISTRATION_CONFIRMED]: (d: any) =>
       `You're registered for ${d.eventTitle} on ${d.eventDate}`,
     
     [NotificationType.WAITLIST_ADDED]: (d) =>

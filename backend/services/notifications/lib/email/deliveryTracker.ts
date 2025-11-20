@@ -383,3 +383,98 @@ export default {
   getDeliveryHistory,
   getDeliveryStats,
 };
+
+/**
+ * Track successful email send (convenience wrapper)
+ */
+export async function trackEmailSent(params: {
+  userId: string;
+  notificationType: string;
+  channel: string;
+  recipient: string;
+  subject: string;
+  messageId: string;
+  attempt: number;
+  metadata: Record<string, any>;
+}): Promise<void> {
+  const notificationId = `${params.userId}-${params.notificationType}-${params.metadata.eventId}`;
+  
+  await createDeliveryTracking(
+    notificationId,
+    NotificationChannel.EMAIL,
+    params.attempt,
+    params.recipient,
+    params.subject
+  );
+  
+  await markAsSent(
+    notificationId,
+    NotificationChannel.EMAIL,
+    params.attempt,
+    params.messageId
+  );
+}
+
+/**
+ * Track failed email send (convenience wrapper)
+ */
+export async function trackEmailFailed(params: {
+  userId: string;
+  notificationType: string;
+  channel: string;
+  recipient: string;
+  attempt: number;
+  error: { code: string; message: string; details: any };
+  metadata: Record<string, any>;
+}): Promise<void> {
+  const notificationId = `${params.userId}-${params.notificationType}-${params.metadata.eventId}`;
+  
+  await createDeliveryTracking(
+    notificationId,
+    NotificationChannel.EMAIL,
+    params.attempt,
+    params.recipient
+  );
+  
+  await markAsFailed(
+    notificationId,
+    NotificationChannel.EMAIL,
+    params.attempt,
+    params.error
+  );
+}
+
+/**
+ * Track email bounce (convenience wrapper)
+ */
+export async function trackBounce(params: {
+  messageId: string;
+  recipient: string;
+  bounceType: string;
+  diagnosticCode?: string;
+}): Promise<void> {
+  // In a real implementation, we'd look up the notification by messageId
+  // For now, log the bounce
+  console.log('Email bounced:', params);
+  
+  // Would call markAsBounced with proper notificationId lookup
+  // await markAsBounced(notificationId, params.messageId, params.bounceType, params.diagnosticCode || 'Unknown');
+}
+
+/**
+ * Track email complaint (convenience wrapper)
+ */
+export async function trackComplaint(params: {
+  messageId: string;
+  recipient: string;
+  feedbackType?: string;
+  userAgent?: string;
+  arrivalDate?: string;
+}): Promise<void> {
+  // In a real implementation, we'd look up the notification by messageId
+  // For now, log the complaint
+  console.log('Email complaint:', params);
+  
+  // Would call markAsComplained with proper notificationId lookup
+  // await markAsComplained(notificationId, params.messageId);
+}

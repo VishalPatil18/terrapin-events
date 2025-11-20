@@ -1,6 +1,6 @@
 import { SNSEvent, Context } from 'aws-lambda';
-import deliveryTracker from '../lib/email/deliveryTracker';
-import preferencesManager from '../lib/preferences/preferencesManager';
+import { trackComplaint } from '../lib/email/deliveryTracker';
+import { updatePreferences } from '../lib/preferences/preferencesManager';
 
 /**
  * Handle SES complaint notifications via SNS
@@ -31,7 +31,7 @@ export const handler = async (event: SNSEvent, context: Context): Promise<void> 
       const userId = extractUserIdFromTags(mail.tags);
 
       for (const recipient of complaint.complainedRecipients) {
-        await deliveryTracker.trackComplaint({
+        await trackComplaint({
           messageId: mail.messageId,
           recipient: recipient.emailAddress,
           feedbackType: complaint.complaintFeedbackType,
@@ -44,7 +44,7 @@ export const handler = async (event: SNSEvent, context: Context): Promise<void> 
           console.log(`Spam complaint from user ${userId}, unsubscribing from emails`);
           
           try {
-            await preferencesManager.updatePreferences(userId, {
+            await updatePreferences(userId, {
               emailEnabled: false,
             });
 

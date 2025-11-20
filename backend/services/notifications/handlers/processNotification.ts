@@ -1,14 +1,18 @@
 import { EventBridgeEvent, Context } from 'aws-lambda';
-import { handler as sendEmailHandler } from './sendEmail';
-import { handler as createInAppNotificationHandler } from './createInAppNotification';
-import preferencesManager from '../lib/preferences/preferencesManager';
-import doNotDisturbChecker from '../lib/preferences/doNotDisturbChecker';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { preferencesManager } from '../lib/preferences/preferencesManager';
+import { doNotDisturbChecker } from '../lib/preferences/doNotDisturbChecker';
 import {
   NotificationEvent,
   NotificationType,
   NotificationChannel,
   NotificationPriority,
+  SendEmailRequest,
+  CreateInAppNotificationRequest,
 } from '../types/notification.types';
+
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const STAGE = process.env.STAGE || 'dev';
 
 /**
  * Main notification processor - orchestrates notification sending
@@ -65,12 +69,13 @@ export const handler = async (
 
           // Check Do Not Disturb hours (skip for high priority)
           if (priority !== NotificationPriority.HIGH) {
-            const dndCheck = doNotDisturbChecker.isInDoNotDisturbPeriod(
+            const isInDND = doNotDisturbChecker.isInDoNotDisturbPeriod(
               preferences
             );
             
-            if (dndCheck.isInDND) {
-              console.log(`User ${recipient.userId} is in DND period, scheduling for ${dndCheck.nextAvailableTime}`);
+            if (isInDND) {
+              const nextAvailable = doNotDisturbChecker.getNextAvailableTime(preferences);
+              console.log(`User ${recipient.userId} is in DND period, scheduling for ${nextAvailable.toISOString()}`);
               // TODO: Schedule for later (implement with EventBridge scheduler)
               return;
             }
@@ -88,40 +93,49 @@ export const handler = async (
 
           // Email notification
           if (preferences.emailEnabled) {
+            const emailRequest: SendEmailRequest = {
+              userId: recipient.userId,
+              email: recipient.email,
+              notificationType,
+              priority,
+              data: notificationData,
+              metadata: {
+                eventId: detail.eventId,
+                requestId: context.awsRequestId,
+              },
+            };
+
             sendPromises.push(
-              sendEmailHandler(
-                {
-                  userId: recipient.userId,
-                  email: recipient.email,
-                  notificationType,
-                  priority,
-                  data: notificationData,
-                  metadata: {
-                    eventId: detail.eventId,
-                    requestId: context.awsRequestId,
-                  },
-                  attempt: 1,
-                },
-                context
+              lambdaClient.send(
+                new InvokeCommand({
+                  FunctionName: `tems-notifications-${STAGE}-sendEmail`,
+                  InvocationType: 'Event', // Async invocation
+                  Payload: JSON.stringify(emailRequest),
+                })
               )
             );
           }
 
           // In-app notification
           if (preferences.inAppEnabled) {
+            const inAppRequest: CreateInAppNotificationRequest = {
+              userId: recipient.userId,
+              notificationType,
+              priority,
+              data: notificationData,
+              metadata: {
+                eventId: detail.eventId,
+                requestId: context.awsRequestId,
+              },
+            };
+
             sendPromises.push(
-              createInAppNotificationHandler(
-                {
-                  userId: recipient.userId,
-                  type: notificationType, // 👈 must be `type`, not `notificationType`
-                  priority,
-                  data: notificationData,
-                  metadata: {
-                    eventId: detail.eventId,
-                    requestId: context.awsRequestId,
-                  },
-                },
-                context
+              lambdaClient.send(
+                new InvokeCommand({
+                  FunctionName: `tems-notifications-${STAGE}-createInAppNotification`,
+                  InvocationType: 'Event', // Async invocation
+                  Payload: JSON.stringify(inAppRequest),
+                })
               )
             );
           }
@@ -146,7 +160,7 @@ export const handler = async (
  */
 function mapEventToNotificationType(detailType: string): NotificationType | null {
   const mapping: Record<string, NotificationType> = {
-    UserRegistered: NotificationType.REGISTRATION_CONFIRMATION,
+    UserRegistered: NotificationType.REGISTRATION_CONFIRMED,
     UserWaitlisted: NotificationType.WAITLIST_ADDED,
     WaitlistPromoted: NotificationType.WAITLIST_PROMOTED,
     RegistrationCancelled: NotificationType.REGISTRATION_CANCELLED,
@@ -185,45 +199,29 @@ function extractRecipients(
   return recipients;
 }
 
-/**
- * Get preference key for notification type
- */
-function getPreferenceKey(notificationType: NotificationType): string {
-  const mapping: Record<NotificationType, string> = {
-    [NotificationType.REGISTRATION_CONFIRMATION]: 'registrations',
-    [NotificationType.WAITLIST_ADDED]: 'waitlist',
-    [NotificationType.WAITLIST_PROMOTED]: 'waitlist',
-    [NotificationType.REGISTRATION_CANCELLED]: 'registrations',
-    [NotificationType.EVENT_UPDATED]: 'eventUpdates',
-    [NotificationType.EVENT_CANCELLED]: 'eventUpdates',
-    [NotificationType.EVENT_REMINDER_24H]: 'reminders',
-    [NotificationType.EVENT_REMINDER_1H]: 'reminders',
-  };
 
-  return mapping[notificationType];
-}
 
 /**
  * Get notification priority
  */
 function getNotificationPriority(notificationType: NotificationType): NotificationPriority {
-  const highPriority = [
+  const highPriorityTypes = [
     NotificationType.WAITLIST_PROMOTED,
     NotificationType.EVENT_CANCELLED,
     NotificationType.EVENT_REMINDER_1H,
   ];
 
-  const mediumPriority = [
-    NotificationType.REGISTRATION_CONFIRMATION,
+  const mediumPriorityTypes = [
+    NotificationType.REGISTRATION_CONFIRMED,
     NotificationType.EVENT_UPDATED,
     NotificationType.EVENT_REMINDER_24H,
   ];
 
-  if (highPriority.includes(notificationType)) {
+  if (highPriorityTypes.includes(notificationType)) {
     return NotificationPriority.HIGH;
   }
   
-  if (mediumPriority.includes(notificationType)) {
+  if (mediumPriorityTypes.includes(notificationType)) {
     return NotificationPriority.MEDIUM;
   }
 
@@ -254,7 +252,7 @@ function prepareNotificationData(
 
   // Add type-specific data
   switch (notificationType) {
-    case NotificationType.REGISTRATION_CONFIRMATION:
+    case NotificationType.REGISTRATION_CONFIRMED:
       return {
         ...baseData,
         ticketNumber: detail.ticketNumber,

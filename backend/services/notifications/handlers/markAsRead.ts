@@ -29,7 +29,7 @@ interface MarkAsReadResponse {
  * - readAt: current timestamp
  * - updatedAt: current timestamp
  */
-export const handler = async (
+export async function handler(
   event: { arguments: MarkAsReadRequest },
   context: Context
 ): Promise<MarkAsReadResponse> => {

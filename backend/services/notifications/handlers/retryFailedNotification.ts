@@ -52,7 +52,7 @@ export const handler = async (event: SQSEvent, context: Context): Promise<void> 
         });
 
         // If this was the final attempt, log for DLQ monitoring
-        if (request.attempt >= 3) {
+        if ((request.attempt || 1) >= 3) {
           console.error('Max retries reached, message will move to DLQ:', {
             userId: request.userId,
             type: request.notificationType,

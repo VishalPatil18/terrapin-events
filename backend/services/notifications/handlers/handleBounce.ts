@@ -1,6 +1,6 @@
 import { SNSEvent, Context } from 'aws-lambda';
-import deliveryTracker from '../lib/email/deliveryTracker';
-import preferencesManager from '../lib/preferences/preferencesManager';
+import { trackBounce } from '../lib/email/deliveryTracker';
+import { preferencesManager } from '../lib/preferences/preferencesManager';
 
 /**
  * Handle SES bounce notifications via SNS
@@ -35,13 +35,11 @@ export const handler = async (event: SNSEvent, context: Context): Promise<void> 
       const userId = extractUserIdFromTags(mail.tags);
 
       for (const recipient of bounce.bouncedRecipients) {
-        await deliveryTracker.trackBounce({
+        await trackBounce({
           messageId: mail.messageId,
           recipient: recipient.emailAddress,
           bounceType: bounce.bounceType,
-          bounceSubType: bounce.bounceSubType,
           diagnosticCode: recipient.diagnosticCode,
-          action: recipient.action,
         });
 
         // For permanent bounces, consider disabling email notifications

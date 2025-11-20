@@ -45,7 +45,7 @@ interface ListNotificationsResponse {
  * 
  * Returns most recent notifications first
  */
-export const handler = async (
+export async function handler(
   event: { arguments: ListNotificationsRequest },
   context: Context
 ): Promise<ListNotificationsResponse> => {

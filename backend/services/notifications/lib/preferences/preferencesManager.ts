@@ -348,7 +348,7 @@ export async function bulkUpdateNotificationTypes(
   });
 }
 
-export default {
+export const preferencesManager = {
   getPreferences,
   createDefaultPreferences,
   updatePreferences,
@@ -361,3 +361,5 @@ export default {
   enableNotificationType,
   bulkUpdateNotificationTypes,
 };
+
+export default preferencesManager;

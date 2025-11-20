@@ -471,3 +471,78 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   initialDelayMs: 1000,
   maxDelayMs: 60000,
 };
+
+// ============================================================================
+// HANDLER REQUEST/RESPONSE TYPES
+// ============================================================================
+
+/**
+ * Request for creating in-app notification
+ */
+export interface CreateInAppNotificationRequest {
+  userId: string;
+  notificationType: NotificationType;
+  priority: NotificationPriority;
+  data: Record<string, any>;
+  metadata: Record<string, any>;
+}
+
+/**
+ * Request for sending email notification
+ */
+export interface SendEmailRequest {
+  userId: string;
+  email: string;
+  notificationType: NotificationType;
+  priority: NotificationPriority;
+  data: Record<string, any>;
+  metadata: Record<string, any>;
+  attempt?: number;
+}
+
+/**
+ * Generic notification event from EventBridge
+ */
+export interface NotificationEvent {
+  userId: string;
+  userEmail: string;
+  userName?: string;
+  userTimezone?: string;
+  eventId: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime: string;
+  eventLocation: string;
+  eventDescription?: string;
+  eventRoom?: string;
+  registrationId?: string;
+  ticketNumber?: string;
+  qrCodeUrl?: string;
+  waitlistPosition?: number;
+  waitlistId?: string;
+  expiresAt?: string;
+  changes?: Array<{ field: string; oldValue: any; newValue: any }>;
+  updateMessage?: string;
+  cancelledByUser?: boolean;
+  cancellationReason?: string;
+  waitlistPromoted?: boolean;
+  canReregister?: boolean;
+  rescheduled?: boolean;
+  autoReregister?: boolean;
+  newEventDate?: string;
+  newEventTime?: string;
+  newEventUrl?: string;
+  organizerMessage?: string;
+  organizerPhone?: string;
+  organizerEmail?: string;
+  requirements?: string[];
+  parkingInfo?: string;
+  locationMapUrl?: string;
+  registeredUsers?: Array<{
+    userId: string;
+    email: string;
+    timezone?: string;
+  }>;
+  timestamp: string;
+  [key: string]: any;
+}

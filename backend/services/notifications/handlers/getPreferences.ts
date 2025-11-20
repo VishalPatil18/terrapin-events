@@ -18,7 +18,7 @@ interface GetPreferencesResponse {
  * 
  * Returns default preferences if none exist
  */
-export const handler = async (
+export async function handler(
   event: { arguments: GetPreferencesRequest },
   context: Context
 ): Promise<GetPreferencesResponse> => {

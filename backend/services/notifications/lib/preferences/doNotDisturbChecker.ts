@@ -270,7 +270,7 @@ export function getCurrentHourInTimezone(timezone: string): number {
   }
 }
 
-export default {
+export const doNotDisturbChecker = {
   isInDoNotDisturbPeriod,
   getNextAvailableTime,
   shouldSendNotification,
@@ -280,3 +280,5 @@ export default {
   isValidTimezone,
   getCurrentHourInTimezone,
 };
+
+export default doNotDisturbChecker;

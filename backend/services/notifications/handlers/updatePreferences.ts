@@ -23,7 +23,7 @@ interface UpdatePreferencesResponse {
  * - doNotDisturb: { enabled, startTime, endTime }
  * - frequency: digest settings
  */
-export const handler = async (
+export async function handler(
   event: { arguments: UpdatePreferencesRequest },
   context: Context
 ): Promise<UpdatePreferencesResponse> => {
@@ -71,25 +71,7 @@ function validatePreferences(preferences: Partial<NotificationPreferences>): voi
     }
   }
 
-  // Validate frequency settings if provided
-  if (preferences.frequency) {
-    const { digestEnabled, digestFrequency, batchNotifications } = preferences.frequency;
-    
-    if (digestFrequency && !['daily', 'weekly'].includes(digestFrequency)) {
-      throw new Error('Invalid digest frequency. Must be "daily" or "weekly"');
-    }
-    
-    if (batchNotifications && typeof batchNotifications.enabled !== 'boolean') {
-      throw new Error('Invalid batch notifications enabled value');
-    }
-    
-    if (batchNotifications?.intervalMinutes) {
-      const interval = batchNotifications.intervalMinutes;
-      if (interval < 5 || interval > 1440) {
-        throw new Error('Batch interval must be between 5 and 1440 minutes');
-      }
-    }
-  }
+  // Note: frequency field validation removed as NotificationFrequency is an enum, not an object
 }
 
 /**
