@@ -1,4 +1,4 @@
-service: tems-notifications
+service: terrapin-events-notifications
 
 frameworkVersion: '4'
 
@@ -7,15 +7,23 @@ provider:
   runtime: nodejs20.x
   region: us-east-1
   stage: ${opt:stage, 'dev'}
-#  profile: tems-${self:provider.stage}
-
+  
   environment:
-    DYNAMODB_TABLE_NAME: terrapin-events-${self:provider.stage}
-    EVENT_BUS_NAME: terrapin-events-${self:provider.stage}
+    STAGE: ${self:provider.stage}
+    AWS_ACCOUNT_ID: ${aws:accountId}
+    # Use CloudFormation export names directly
+    DYNAMODB_TABLE_NAME:
+      Fn::ImportValue: ${self:provider.stage}-TemsTableName
+    EVENT_BUS_NAME: ${self:custom.eventBusName}
     SES_FROM_EMAIL: noreply@terrapinevents.umd.edu
     SES_REPLY_TO_EMAIL: support@terrapinevents.umd.edu
     SES_CONFIGURATION_SET: tems-email-tracking-${self:provider.stage}
     NODE_ENV: ${self:provider.stage}
+    # Queue URLs - using CloudFormation Refs
+    RETRY_QUEUE_URL:
+      Ref: NotificationRetryQueue
+    DLQ_URL:
+      Ref: NotificationDLQ
 
   iam:
     role:
@@ -24,14 +32,21 @@ provider:
         - Effect: Allow
           Action:
             - dynamodb:Query
+            - dynamodb:Scan
             - dynamodb:GetItem
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
             - dynamodb:BatchWriteItem
+            - dynamodb:ConditionCheckItem
           Resource:
-            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_NAME}"
-            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE_NAME}/index/*"
+            # Use CloudFormation ImportValue for IAM resources
+            - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+            - Fn::Join:
+                - ''
+                - - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                  - '/index/*'
         
         # SES permissions
         - Effect: Allow
@@ -47,7 +62,7 @@ provider:
           Action:
             - events:PutEvents
           Resource:
-            - "arn:aws:events:${self:provider.region}:*:event-bus/${self:provider.environment.EVENT_BUS_NAME}"
+            - arn:aws:events:${self:provider.region}:${aws:accountId}:event-bus/${self:custom.eventBusName}
         
         # SQS permissions
         - Effect: Allow
@@ -57,20 +72,52 @@ provider:
             - sqs:DeleteMessage
             - sqs:GetQueueAttributes
           Resource:
-            - !GetAtt NotificationRetryQueue.Arn
-            - !GetAtt NotificationDLQ.Arn
+            - Fn::GetAtt:
+                - NotificationRetryQueue
+                - Arn
+            - Fn::GetAtt:
+                - NotificationDLQ
+                - Arn
+
+custom:
+  eventBusName: terrapin-events-eventbridge-${self:provider.stage}
+  # Use CloudFormation ImportValue for Cognito ARN
+  cognitoUserPoolArn:
+    Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolArn
+
+# Native TypeScript support in Serverless Framework v4
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    format: cjs
+    external:
+      - '@aws-sdk/*'
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!.build/**'
 
 functions:
   # Main notification processor - orchestrates notification sending
   processNotification:
     handler: handlers/processNotification.handler
-    timeout: 30
+    name: ${self:service}-process-${self:provider.stage}
+    description: Lambda handler for processing and orchestrating notifications
     memorySize: 512
+    timeout: 29
     environment:
-      RETRY_QUEUE_URL: !Ref NotificationRetryQueue
+      FUNCTION_NAME: processNotification
     events:
       - eventBridge:
-          eventBus: ${self:provider.environment.EVENT_BUS_NAME}
+          eventBus: ${self:custom.eventBusName}
           pattern:
             source:
               - tems.registrations
@@ -88,77 +135,126 @@ functions:
   # Email sending service
   sendEmail:
     handler: handlers/sendEmail.handler
-    timeout: 30
+    name: ${self:service}-send-email-${self:provider.stage}
+    description: Lambda handler for sending email notifications via SES
     memorySize: 512
+    timeout: 29
     environment:
-      RETRY_QUEUE_URL: !Ref NotificationRetryQueue
+      FUNCTION_NAME: sendEmail
 
   # In-app notification creation
   createInAppNotification:
     handler: handlers/createInAppNotification.handler
-    timeout: 10
+    name: ${self:service}-create-inapp-${self:provider.stage}
+    description: Lambda handler for creating in-app notifications
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: createInAppNotification
 
   # Mark notification as read
   markAsRead:
     handler: handlers/markAsRead.handler
-    timeout: 10
+    name: ${self:service}-mark-read-${self:provider.stage}
+    description: Lambda handler for marking single notification as read
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: markAsRead
 
   # Mark all notifications as read
   markAllAsRead:
     handler: handlers/markAllAsRead.handler
-    timeout: 30
+    name: ${self:service}-mark-all-read-${self:provider.stage}
+    description: Lambda handler for marking all notifications as read
     memorySize: 512
+    timeout: 29
+    environment:
+      FUNCTION_NAME: markAllAsRead
 
   # Update user preferences
   updatePreferences:
     handler: handlers/updatePreferences.handler
-    timeout: 10
+    name: ${self:service}-update-prefs-${self:provider.stage}
+    description: Lambda handler for updating user notification preferences
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: updatePreferences
 
   # Get user preferences
   getPreferences:
     handler: handlers/getPreferences.handler
-    timeout: 10
+    name: ${self:service}-get-prefs-${self:provider.stage}
+    description: Lambda handler for retrieving user notification preferences
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: getPreferences
 
   # List user notifications
   listNotifications:
     handler: handlers/listNotifications.handler
-    timeout: 10
+    name: ${self:service}-list-${self:provider.stage}
+    description: Lambda handler for listing user notifications with pagination
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: listNotifications
+
+  # Get unread count
+  getUnreadCount:
+    handler: handlers/getUnreadCount.handler
+    name: ${self:service}-unread-count-${self:provider.stage}
+    description: Lambda handler for getting unread notification count
+    memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: getUnreadCount
 
   # SES bounce handler
   handleBounce:
     handler: handlers/handleBounce.handler
-    timeout: 10
+    name: ${self:service}-bounce-${self:provider.stage}
+    description: SNS handler for SES bounce notifications
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: handleBounce
     events:
       - sns:
-          arn: !Ref BounceNotificationTopic
+          arn:
+            Ref: BounceNotificationTopic
           topicName: ses-bounces-${self:provider.stage}
 
   # SES complaint handler
   handleComplaint:
     handler: handlers/handleComplaint.handler
-    timeout: 10
+    name: ${self:service}-complaint-${self:provider.stage}
+    description: SNS handler for SES complaint notifications
     memorySize: 256
+    timeout: 15
+    environment:
+      FUNCTION_NAME: handleComplaint
     events:
       - sns:
-          arn: !Ref ComplaintNotificationTopic
+          arn:
+            Ref: ComplaintNotificationTopic
           topicName: ses-complaints-${self:provider.stage}
 
   # Retry failed notifications from queue
   retryFailedNotification:
     handler: handlers/retryFailedNotification.handler
-    timeout: 30
+    name: ${self:service}-retry-${self:provider.stage}
+    description: SQS handler for retrying failed notifications
     memorySize: 512
+    timeout: 29
     environment:
-      DLQ_URL: !Ref NotificationDLQ
+      FUNCTION_NAME: retryFailedNotification
     events:
       - sqs:
-          arn: !GetAtt NotificationRetryQueue.Arn
+          arn:
+            Fn::GetAtt: [NotificationRetryQueue, Arn]
           batchSize: 10
           maximumBatchingWindowInSeconds: 5
 
@@ -309,55 +405,55 @@ resources:
 
     # Lambda Function ARNs for AppSync Integration
     ListNotificationsLambdaArn:
-      Description: ARN of the listNotifications Lambda function
-      Value: !GetAtt ListNotificationsLambdaFunction.Arn
+      Description: ARN of listNotifications Lambda function
+      Value:
+        Fn::GetAtt:
+          - ListNotificationsLambdaFunction
+          - Arn
       Export:
         Name: ${self:provider.stage}-ListNotificationsLambdaArn
 
     MarkAsReadLambdaArn:
-      Description: ARN of the markAsRead Lambda function
-      Value: !GetAtt MarkAsReadLambdaFunction.Arn
+      Description: ARN of markAsRead Lambda function
+      Value:
+        Fn::GetAtt:
+          - MarkAsReadLambdaFunction
+          - Arn
       Export:
         Name: ${self:provider.stage}-MarkAsReadLambdaArn
 
     MarkAllAsReadLambdaArn:
-      Description: ARN of the markAllAsRead Lambda function
-      Value: !GetAtt MarkAllAsReadLambdaFunction.Arn
+      Description: ARN of markAllAsRead Lambda function
+      Value:
+        Fn::GetAtt:
+          - MarkAllAsReadLambdaFunction
+          - Arn
       Export:
         Name: ${self:provider.stage}-MarkAllAsReadLambdaArn
 
     GetPreferencesLambdaArn:
-      Description: ARN of the getPreferences Lambda function
-      Value: !GetAtt GetPreferencesLambdaFunction.Arn
+      Description: ARN of getPreferences Lambda function
+      Value:
+        Fn::GetAtt:
+          - GetPreferencesLambdaFunction
+          - Arn
       Export:
         Name: ${self:provider.stage}-GetPreferencesLambdaArn
 
     UpdatePreferencesLambdaArn:
-      Description: ARN of the updatePreferences Lambda function
-      Value: !GetAtt UpdatePreferencesLambdaFunction.Arn
+      Description: ARN of updatePreferences Lambda function
+      Value:
+        Fn::GetAtt:
+          - UpdatePreferencesLambdaFunction
+          - Arn
       Export:
         Name: ${self:provider.stage}-UpdatePreferencesLambdaArn
 
-package:
-  individually: true
-  patterns:
-    - '!node_modules/**'
-    - '!.git/**'
-    - '!.github/**'
-    - '!__tests__/**'
-    - '!*.md'
-    - 'handlers/**'
-    - 'lib/**'
-    - 'types/**'
-    - 'templates/**'
-
-custom:
-  esbuild:
-    bundle: true
-    minify: false
-    sourcemap: true
-    exclude:
-      - aws-sdk
-    target: node20
-    platform: node
-    concurrency: 10
+    GetUnreadCountLambdaArn:
+      Description: ARN of getUnreadCount Lambda function
+      Value:
+        Fn::GetAtt:
+          - GetUnreadCountLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-GetUnreadCountLambdaArn

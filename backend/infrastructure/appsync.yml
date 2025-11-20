@@ -173,6 +173,87 @@ resources:
             CANCELLED
           }
 
+          # Week 9: Notification Types
+          enum NotificationType {
+            REGISTRATION_CONFIRMATION
+            WAITLIST_ADDED
+            WAITLIST_PROMOTED
+            REGISTRATION_CANCELLED
+            EVENT_UPDATED
+            EVENT_CANCELLED
+            EVENT_REMINDER_24H
+            EVENT_REMINDER_1H
+          }
+
+          enum NotificationPriority {
+            LOW
+            MEDIUM
+            HIGH
+          }
+
+          # Week 9: Notification Type
+          type Notification {
+            notificationId: ID!
+            userId: ID!
+            type: NotificationType!
+            priority: NotificationPriority!
+            title: String!
+            message: String!
+            actionUrl: String
+            read: Boolean!
+            readAt: AWSDateTime
+            createdAt: AWSDateTime!
+            data: AWSJSON
+          }
+
+          # Week 9: Notification Preferences Type
+          type NotificationPreferences {
+            userId: ID!
+            channels: NotificationChannels!
+            types: NotificationTypes!
+            doNotDisturb: DoNotDisturb!
+            frequency: NotificationFrequency!
+            unsubscribedAt: AWSDateTime
+            updatedAt: AWSDateTime!
+          }
+
+          type NotificationChannels {
+            email: Boolean!
+            inApp: Boolean!
+            sms: Boolean!
+          }
+
+          type NotificationTypes {
+            registrations: Boolean!
+            waitlist: Boolean!
+            reminders: Boolean!
+            eventUpdates: Boolean!
+            marketing: Boolean!
+          }
+
+          type DoNotDisturb {
+            enabled: Boolean!
+            startTime: String
+            endTime: String
+          }
+
+          type NotificationFrequency {
+            digestEnabled: Boolean!
+            digestFrequency: String
+            batchNotifications: BatchSettings
+          }
+
+          type BatchSettings {
+            enabled: Boolean!
+            intervalMinutes: Int
+          }
+
+          type NotificationList {
+            notifications: [Notification!]!
+            nextToken: String
+            unreadCount: Int!
+          }
+
           # Queries
           type Query {
             getEvent(id: ID!): Event
@@ -193,6 +274,22 @@ resources:
             getCurrentUser: User!
             getRegistration(id: ID!): Registration
             listMyRegistrations: [Registration!]!
+            checkUserRegistration(eventId: ID!): Registration
+            getEventCapacity(eventId: ID!): EventCapacityInfo!
+
+            # Week 9: Notifications
+            listNotifications(
+              limit: Int
+              nextToken: String
+              unreadOnly: Boolean
+            ): NotificationList!
+              @aws_cognito_user_pools
+
+            getNotificationPreferences: NotificationPreferences!
+              @aws_cognito_user_pools
+
+            getUnreadCount: Int!
+              @aws_cognito_user_pools
           }
 
           # Mutations
@@ -205,12 +302,31 @@ resources:
             cancelRegistration(id: ID!): Registration!
             checkInAttendee(registrationId: ID!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
+
+            # Week 9: Notifications
+            markNotificationAsRead(notificationId: ID!): Notification!
+              @aws_cognito_user_pools
+
+            markAllNotificationsAsRead: Int!
+              @aws_cognito_user_pools
+
+            updateNotificationPreferences(preferences: UpdatePreferencesInput!): NotificationPreferences!
+              @aws_cognito_user_pools
           }
 
           # Subscriptions
           type Subscription {
             onEventUpdate(eventId: ID!): Event @aws_subscribe(mutations: ["updateEvent", "publishEvent"])
             onNewRegistration(eventId: ID!): Registration @aws_subscribe(mutations: ["registerForEvent"])
+
+            # Week 9: Notification Subscriptions
+            onNotificationCreated: Notification!
+              @aws_cognito_user_pools
+              @aws_subscribe(mutations: ["markNotificationAsRead"])
+
+            onNotificationRead: Notification!
+              @aws_cognito_user_pools
+              @aws_subscribe(mutations: ["markNotificationAsRead"])
           }
 
           # Input Types
@@ -300,6 +416,54 @@ resources:
           input CalendarFiltersInput {
             categories: [EventCategory!]
             locations: [String!]
+          }
+
+          # Week 9: Notification Preference Inputs
+          input UpdatePreferencesInput {
+            channels: NotificationChannelsInput
+            types: NotificationTypesInput
+            doNotDisturb: DoNotDisturbInput
+            frequency: NotificationFrequencyInput
+          }
+
+          input NotificationChannelsInput {
+            email: Boolean
+            inApp: Boolean
+            sms: Boolean
+          }
+
+          input NotificationTypesInput {
+            registrations: Boolean
+            waitlist: Boolean
+            reminders: Boolean
+            eventUpdates: Boolean
+            marketing: Boolean
+          }
+
+          input DoNotDisturbInput {
+            enabled: Boolean
+            startTime: String
+            endTime: String
+          }
+
+          input NotificationFrequencyInput {
+            digestEnabled: Boolean
+            digestFrequency: String
+            batchNotifications: BatchSettingsInput
+          }
+
+          input BatchSettingsInput {
+            enabled: Boolean
+            intervalMinutes: Int
+          }
+
+          # Additional Types
+          type EventCapacityInfo {
+            capacity: Int!
+            registeredCount: Int!
+            waitlistCount: Int!
+            availableSeats: Int!
+            waitlistAvailable: Boolean!
           }
             
           # Connection Types
