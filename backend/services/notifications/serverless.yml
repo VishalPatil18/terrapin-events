@@ -80,7 +80,7 @@ provider:
                 - Arn
 
 custom:
-  eventBusName: terrapin-events-eventbridge-${self:provider.stage}
+  eventBusName: ${cf:terrapin-events-eventbridge-${self:provider.stage}.EventBusName}
   # Use CloudFormation ImportValue for Cognito ARN
   cognitoUserPoolArn:
     Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolArn
