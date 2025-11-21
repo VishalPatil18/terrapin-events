@@ -89,9 +89,11 @@ resources:
             id: ID!
             userId: ID!
             eventId: ID!
+            event: Event
             status: RegistrationStatus!
             qrCode: String!
             waitlistPosition: Int
+            promotionDeadline: AWSDateTime
             registeredAt: AWSDateTime!
             attendedAt: AWSDateTime
             }
@@ -123,6 +125,16 @@ resources:
           type FacetCount {
             value: String!
             count: Int!
+          }
+          
+          # Event Capacity Info Type
+          type EventCapacityInfo {
+            eventId: ID!
+            capacity: Int!
+            registeredCount: Int!
+            waitlistCount: Int!
+            availableSeats: Int!
+            isFull: Boolean!
           }
 
           # Location Type
@@ -272,6 +284,8 @@ resources:
             # Users
             getUser(id: ID!): User
             getCurrentUser: User!
+            
+            # Registrations
             getRegistration(id: ID!): Registration
             listMyRegistrations: [Registration!]!
             checkUserRegistration(eventId: ID!): Registration
@@ -298,9 +312,11 @@ resources:
             updateEvent(id: ID!, input: UpdateEventInput!): Event!
             deleteEvent(id: ID!): Event!
             publishEvent(id: ID!): Event!
-            registerForEvent(eventId: ID!): Registration!
-            cancelRegistration(id: ID!): Registration!
-            checkInAttendee(registrationId: ID!): Registration!
+            registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
+            cancelRegistration(registrationId: ID!): Registration!
+            acceptPromotion(id: ID!): Registration!
+            declinePromotion(id: ID!): Registration!
+            checkInAttendee(input: CheckInAttendeeInput!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
 
             # Week 9: Notifications
@@ -417,6 +433,11 @@ resources:
             categories: [EventCategory!]
             locations: [String!]
           }
+          
+          input CheckInAttendeeInput {
+            registrationId: ID!
+            qrCodeData: String!
+          }
 
           # Week 9: Notification Preference Inputs
           input UpdatePreferencesInput {
@@ -464,7 +485,7 @@ resources:
             waitlistCount: Int!
             availableSeats: Int!
             waitlistAvailable: Boolean!
-          }
+          
             
           # Connection Types
           type EventConnection {
@@ -602,6 +623,48 @@ resources:
             "operation": "GetItem",
             "key": {
               "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.identity.sub"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+    # Field Resolver: Registration.event
+    # Resolves the event field when querying a registration
+    RegistrationEventResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Registration
+        FieldName: event
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("EVENT#$ctx.source.eventId"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+    # Field Resolver: Event.organizer
+    # Resolves the organizer User field when querying an event
+    EventOrganizerResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Event
+        FieldName: organizer
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.source.organizerId"),
               "SK": $util.dynamodb.toDynamoDBJson("METADATA")
             }
           }

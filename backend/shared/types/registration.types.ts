@@ -40,13 +40,35 @@ export interface Registration {
   updatedAt: string;
 }
 
+/**
+ * GraphQL Registration Type
+ * Matches the AppSync GraphQL schema exactly
+ * Used as the return type for Lambda resolvers
+ * 
+ * Note: The 'event' field is populated by AppSync field resolver,
+ * so it's not included here. Lambdas return this type, and AppSync
+ * automatically adds the event data when the query requests it.
+ */
+export interface GraphQLRegistration {
+  id: string;
+  userId: string;
+  eventId: string;
+  status: RegistrationStatus;
+  qrCode: string;  // Required in GraphQL schema (empty string if not generated yet)
+  waitlistPosition?: number | null;
+  promotionDeadline?: string | null;
+  registeredAt: string;
+  attendedAt?: string | null;
+}
+
 // GraphQL Input Types
 export interface RegisterForEventInput {
   eventId: string;
+  idempotencyKey?: string;  // Optional - for preventing duplicate registrations
 }
 
 export interface CancelRegistrationInput {
-  id: string;  // Registration ID
+  registrationId: string;  // Registration ID
 }
 
 export interface CheckInAttendeeInput {
@@ -121,6 +143,20 @@ export interface CapacityCheckResult {
   availableSlots: number;
   totalCapacity: number;
   registeredCount: number;
+}
+
+/**
+ * Event Capacity Info
+ * Matches the GraphQL EventCapacityInfo type
+ * Returned by getEventCapacity query
+ */
+export interface EventCapacityInfo {
+  eventId: string;
+  capacity: number;
+  registeredCount: number;
+  waitlistCount: number;
+  availableSeats: number;
+  isFull: boolean;
 }
 
 // Registration validation result

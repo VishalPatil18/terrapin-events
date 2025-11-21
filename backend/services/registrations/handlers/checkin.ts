@@ -6,9 +6,10 @@
 import { AppSyncResolverEvent, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { Registration, RegistrationStatus, CheckInAttendeeInput } from '../../../shared/types/registration.types';
+import { Registration, GraphQLRegistration, RegistrationStatus, CheckInAttendeeInput } from '../../../shared/types/registration.types';
 import { getUserIdFromIdentity } from '../../../shared/types/appsync.types';
 import { verifyQRCode } from '../business-logic/qr-generator';
+import { toGraphQLRegistration } from './helpers';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -21,7 +22,7 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME!;
 export async function handler(
   event: AppSyncResolverEvent<{ input: CheckInAttendeeInput }>,
   context: Context
-): Promise<Registration> {
+): Promise<GraphQLRegistration> {
   console.log('CheckInAttendee handler invoked', {
     requestId: context.awsRequestId,
     input: event.arguments.input,
@@ -146,12 +147,15 @@ export async function handler(
 
     console.log(`User ${userId} checked in for event ${eventId}`);
 
-    return {
+    // Return GraphQL-compatible format
+    const updatedRegistration = {
       ...registration,
       status: RegistrationStatus.ATTENDED,
       attendedAt: timestamp,
       updatedAt: timestamp,
     };
+    
+    return toGraphQLRegistration(updatedRegistration);
 
   } catch (error: any) {
     console.error('Check-in error:', error);

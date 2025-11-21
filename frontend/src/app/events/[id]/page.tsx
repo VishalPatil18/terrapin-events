@@ -22,7 +22,7 @@ export default function EventDetailPage() {
   const eventId = params.id as string;
 
   // Fetch single event
-  const { event, loading: isLoading, error } = useEvent(eventId);
+  const { event, loading: isLoading, error, refresh: refreshEvent } = useEvent(eventId);
   const isError = !!error;
 
   // Fetch related events (same category)
@@ -141,7 +141,7 @@ export default function EventDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content - 3 columns */}
           <div className="lg:col-span-3">
-            <EventDetail event={event} />
+            <EventDetail event={event} onEventUpdate={refreshEvent} />
           </div>
 
           {/* Sidebar - 1 column */}

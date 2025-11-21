@@ -5,22 +5,68 @@
 
 'use client';
 
-import { Calendar, Users, Tag, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Users, Tag, ExternalLink, Loader2 } from 'lucide-react';
 import { Event, formatEventDateTime, getAvailableSeats, isEventFull, getEventCategoryLabel } from '@/types/event.types';
+import { useRegistrationActions, useEventRegistration } from '@/hooks/registrations/useRegistrations';
+import { useAuth } from '@/hooks/useAuth';
+import { Alert } from '@/components/ui/Alert';
 
 export interface EventDetailProps {
   event: Event;
+  onEventUpdate?: () => void | Promise<void>;
 }
 
-export function EventDetail({ event }: EventDetailProps) {
+export function EventDetail({ event, onEventUpdate }: EventDetailProps) {
   const availableSeats = getAvailableSeats(event);
   const isFull = isEventFull(event);
   const imageUrl = event.imageUrl || `https://picsum.photos/seed/${event.id}/1200/400`;
+
+  // Get current user
+  const { user } = useAuth();
+  const isOrganizer = user?.userId === event.organizerId;
+
+  // Registration hooks
+  const { register, cancel, isLoading, error, success, clearMessages } = useRegistrationActions();
+  const { registration, isRegistered, isLoading: isCheckingRegistration, refresh: refreshRegistration } = useEventRegistration(event.id);
+  
+  // Force refresh when event ID changes
+  useEffect(() => {
+    refreshRegistration();
+  }, [event.id, refreshRegistration]);
 
   // Format hours if needed (placeholder - would come from backend)
   const eventHours = {
     weekday: '7PM - 10PM',
     weekend: '7PM - 10PM',
+  };
+
+  const handleRegister = async () => {
+    const result = await register(event.id);
+    if (result) {
+      // Refresh registration status first, then event data to avoid race conditions
+      await refreshRegistration();
+      await onEventUpdate?.();
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!registration) return;
+    
+    if (!confirm('Are you sure you want to cancel your registration?')) {
+      return;
+    }
+    
+    const success = await cancel(registration.id);
+    if (success) {
+      // Refresh registration status first, then event data to avoid race conditions
+      await refreshRegistration();
+      await onEventUpdate?.();
+    }
+  };
+
+  const handleRequestInfo = () => {
+    window.location.href = `mailto:organizer-${event.organizerId}@umd.edu?subject=Information Request: ${event.title}`;
   };
 
   return (
@@ -60,6 +106,18 @@ export function EventDetail({ event }: EventDetailProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Event Details */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Alert Messages */}
+          {error && (
+            <Alert variant="error" onClose={clearMessages}>
+              {error}
+            </Alert>
+          )}
+          {success && (
+            <Alert variant="success" onClose={clearMessages}>
+              {success}
+            </Alert>
+          )}
+
           {/* Description Section */}
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Description</h2>
@@ -217,19 +275,78 @@ export function EventDetail({ event }: EventDetailProps) {
               </div>
             </div>
 
-            {/* Action Buttons - Placeholder for registration */}
+            {/* Registration Status */}
+            {isRegistered && registration && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-green-900">
+                  ✓ You're registered for this event
+                </p>
+                {registration.status === 'WAITLISTED' && (
+                  <p className="text-xs text-green-700 mt-1">
+                    Waitlist position: {registration.waitlistPosition}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Action Buttons */}
             <div className="space-y-3 pt-4 border-t border-gray-200">
-              <button
-                disabled={isFull}
-                className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
-                  isFull
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#A20B23] hover:bg-[#8A0A1E] text-white'
-                }`}
+              {isOrganizer ? (
+                // Organizers can't register for their own events
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-blue-900">
+                    You are the organizer of this event
+                  </p>
+                </div>
+              ) : isCheckingRegistration ? (
+                // Loading registration status
+                <div className="w-full py-3 px-4 rounded-lg bg-gray-100 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                  <span className="text-sm text-gray-600">Checking registration status...</span>
+                </div>
+              ) : isRegistered && registration ? (
+                // User is registered - show cancel button
+                <>
+                  {registration.status === 'WAITLISTED' && (
+                    <button
+                      onClick={handleCancelRegistration}
+                      disabled={isLoading}
+                      className="w-full py-3 px-4 border-2 border-yellow-300 rounded-lg font-semibold text-yellow-700 hover:bg-yellow-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Leave Waitlist
+                    </button>
+                  )}
+                  {(registration.status === 'REGISTERED' || registration.status === 'PROMOTION_PENDING') && (
+                    <button
+                      onClick={handleCancelRegistration}
+                      disabled={isLoading}
+                      className="w-full py-3 px-4 border-2 border-red-300 rounded-lg font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Cancel Registration
+                    </button>
+                  )}
+                </>
+              ) : (
+                // User not registered - show register/join waitlist button
+                <button
+                  onClick={handleRegister}
+                  disabled={isLoading}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${                    isFull
+                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                      : 'bg-[#A20B23] hover:bg-[#8A0A1E] text-white'
+                  }`}
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isFull ? 'Join Waitlist' : 'Register Now'}
+                </button>
+              )}
+              
+              <button 
+                onClick={handleRequestInfo}
+                className="w-full py-3 px-4 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                {isFull ? 'Event Full' : 'Register Now'}
-              </button>
-              <button className="w-full py-3 px-4 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                 Request Information
               </button>
             </div>

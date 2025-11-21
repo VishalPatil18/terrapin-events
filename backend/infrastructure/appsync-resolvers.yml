@@ -117,6 +117,71 @@ resources:
           LambdaFunctionArn:
             Fn::ImportValue: ${self:provider.stage}-ListMyRegistrationsLambdaArn
 
+    GetRegistrationDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: GetRegistrationDataSource
+        Description: Lambda data source for getting a single registration
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-GetRegistrationLambdaArn
+
+    CheckUserRegistrationDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: CheckUserRegistrationDataSource
+        Description: Lambda data source for checking user registration
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-CheckUserRegistrationLambdaArn
+
+    GetEventCapacityDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: GetEventCapacityDataSource
+        Description: Lambda data source for getting event capacity
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-GetEventCapacityLambdaArn
+
+    AcceptPromotionDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: AcceptPromotionDataSource
+        Description: Lambda data source for accepting promotion
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-AcceptPromotionLambdaArn
+
+    DeclinePromotionDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        Name: DeclinePromotionDataSource
+        Description: Lambda data source for declining promotion
+        Type: AWS_LAMBDA
+        ServiceRoleArn: !GetAtt AppSyncLambdaRole.Arn
+        LambdaConfig:
+          LambdaFunctionArn:
+            Fn::ImportValue: ${self:provider.stage}-DeclinePromotionLambdaArn
+
     # ==================== SEARCH DATA SOURCES (Week 7) ====================
     SearchEventsDataSource:
       Type: AWS::AppSync::DataSource
@@ -391,7 +456,58 @@ resources:
         ResponseMappingTemplate: |
           $util.toJson($context.result)
 
+    AcceptPromotionResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: acceptPromotion
+        DataSourceName: !GetAtt AcceptPromotionDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    DeclinePromotionResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Mutation
+        FieldName: declinePromotion
+        DataSourceName: !GetAtt DeclinePromotionDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
     # ==================== REGISTRATION QUERY RESOLVERS ====================
+    GetRegistrationResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: getRegistration
+        DataSourceName: !GetAtt GetRegistrationDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
     ListMyRegistrationsResolver:
       Type: AWS::AppSync::Resolver
       Properties:
@@ -400,6 +516,40 @@ resources:
         TypeName: Query
         FieldName: listMyRegistrations
         DataSourceName: !GetAtt ListMyRegistrationsDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    CheckUserRegistrationResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: checkUserRegistration
+        DataSourceName: !GetAtt CheckUserRegistrationDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "Invoke",
+            "payload": $util.toJson($context)
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($context.result)
+
+    GetEventCapacityResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId:
+          Fn::ImportValue: ${self:provider.stage}-GraphQLApiId
+        TypeName: Query
+        FieldName: getEventCapacity
+        DataSourceName: !GetAtt GetEventCapacityDataSource.Name
         RequestMappingTemplate: |
           {
             "version": "2018-05-29",
