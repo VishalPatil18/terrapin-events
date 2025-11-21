@@ -80,7 +80,8 @@ provider:
                 - Arn
 
 custom:
-  eventBusName: ${cf:terrapin-events-eventbridge-${self:provider.stage}.EventBusName}
+  eventBusName: terrapin-events-eventbridge-${self:provider.stage}
+  eventBusArn: arn:aws:events:${self:provider.region}:${aws:accountId}:event-bus/${self:custom.eventBusName}
   # Use CloudFormation ImportValue for Cognito ARN
   cognitoUserPoolArn:
     Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolArn
@@ -117,7 +118,8 @@ functions:
       FUNCTION_NAME: processNotification
     events:
       - eventBridge:
-          eventBus: ${self:custom.eventBusName}
+#          eventBus: ${self:custom.eventBusName}
+          eventBus: ${self:custom.eventBusArn}
           pattern:
             source:
               - tems.registrations
