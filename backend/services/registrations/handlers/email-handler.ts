@@ -72,7 +72,7 @@ export async function handler(
     switch (detailType) {
       case 'RegistrationCreated':
         emailPayload = {
-          type: 'REGISTRATION_CONFIRMATION',
+          type: 'REGISTRATION_CONFIRMED',
           recipientEmail: (detail as RegistrationCreatedDetail).userEmail,
           recipientName: (detail as RegistrationCreatedDetail).userName,
           eventTitle: (detail as RegistrationCreatedDetail).eventTitle,

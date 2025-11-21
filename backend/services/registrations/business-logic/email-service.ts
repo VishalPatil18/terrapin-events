@@ -63,7 +63,7 @@ function generateEmailContent(payload: EmailNotificationPayload): {
   textBody: string;
 } {
   switch (payload.type) {
-    case 'REGISTRATION_CONFIRMATION':
+    case 'REGISTRATION_CONFIRMED':
       return generateRegistrationConfirmedEmail(payload);
     case 'WAITLIST_ADDED':
       return generateWaitlistAddedEmail(payload);

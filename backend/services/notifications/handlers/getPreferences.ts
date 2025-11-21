@@ -21,7 +21,7 @@ interface GetPreferencesResponse {
 export async function handler(
   event: { arguments: GetPreferencesRequest },
   context: Context
-): Promise<GetPreferencesResponse> => {
+): Promise<GetPreferencesResponse> {
   const { userId } = event.arguments;
 
   console.log('Getting notification preferences:', { userId });

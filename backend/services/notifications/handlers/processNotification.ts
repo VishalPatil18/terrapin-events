@@ -103,6 +103,7 @@ export const handler = async (
                 eventId: detail.eventId,
                 requestId: context.awsRequestId,
               },
+              attempt : 1,
             };
 
             sendPromises.push(

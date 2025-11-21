@@ -26,7 +26,7 @@ interface UpdatePreferencesResponse {
 export async function handler(
   event: { arguments: UpdatePreferencesRequest },
   context: Context
-): Promise<UpdatePreferencesResponse> => {
+): Promise<UpdatePreferencesResponse> {
   const { userId, preferences } = event.arguments;
 
   console.log('Updating notification preferences:', { userId, preferences });

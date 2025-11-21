@@ -48,7 +48,7 @@ interface ListNotificationsResponse {
 export async function handler(
   event: { arguments: ListNotificationsRequest },
   context: Context
-): Promise<ListNotificationsResponse> => {
+): Promise<ListNotificationsResponse> {
   const { userId, limit = 20, nextToken, unreadOnly = false } = event.arguments;
 
   console.log('Listing notifications:', { userId, limit, unreadOnly });

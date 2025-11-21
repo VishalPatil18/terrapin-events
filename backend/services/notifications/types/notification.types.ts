@@ -15,7 +15,7 @@
  * Types of notifications sent to users
  */
 export enum NotificationType {
-  REGISTRATION_CONFIRMATION = 'REGISTRATION_CONFIRMATION',
+  REGISTRATION_CONFIRMED = 'REGISTRATION_CONFIRMED',
   WAITLIST_ADDED = 'WAITLIST_ADDED',
   WAITLIST_PROMOTED = 'WAITLIST_PROMOTED',
   REGISTRATION_CANCELLED = 'REGISTRATION_CANCELLED',
@@ -138,7 +138,7 @@ export interface NotificationPreferences {
   
   // Granular control per notification type
   enabledTypes: {
-    [NotificationType.REGISTRATION_CONFIRMATION]: boolean;
+    [NotificationType.REGISTRATION_CONFIRMED]: boolean;
     [NotificationType.WAITLIST_ADDED]: boolean;
     [NotificationType.WAITLIST_PROMOTED]: boolean;
     [NotificationType.REGISTRATION_CANCELLED]: boolean;
@@ -191,7 +191,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Omit<NotificationPreferences, 'PK
      },
  },
   enabledTypes: {
-    [NotificationType.REGISTRATION_CONFIRMATION]: true,
+    [NotificationType.REGISTRATION_CONFIRMED]: true,
     [NotificationType.WAITLIST_ADDED]: true,
     [NotificationType.WAITLIST_PROMOTED]: true,
     [NotificationType.REGISTRATION_CANCELLED]: true,
@@ -497,7 +497,7 @@ export interface SendEmailRequest {
   priority: NotificationPriority;
   data: Record<string, any>;
   metadata: Record<string, any>;
-  attempt?: number;
+  attempt: number;
 }
 
 /**

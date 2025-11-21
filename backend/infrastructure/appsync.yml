@@ -175,7 +175,7 @@ resources:
 
           # Week 9: Notification Types
           enum NotificationType {
-            REGISTRATION_CONFIRMATION
+            REGISTRATION_CONFIRMED
             WAITLIST_ADDED
             WAITLIST_PROMOTED
             REGISTRATION_CANCELLED
