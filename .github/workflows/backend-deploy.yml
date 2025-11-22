@@ -107,6 +107,18 @@ jobs:
           cd services/search
           serverless deploy --stage dev --verbose
 
+      - name: Install Notification service dependencies
+        id: install-notifications-deps
+        run: |
+          cd services/notifications
+          npm ci
+
+      - name: Deploy Notification service
+        id: deploy-notifications
+        run: |
+          cd services/notifications
+          serverless deploy --stage dev --verbose
+
       - name: Deploy AppSync resolvers
         id: deploy-appsync-resolvers
         run: |

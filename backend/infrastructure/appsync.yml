@@ -97,7 +97,7 @@ resources:
             registeredAt: AWSDateTime!
             attendedAt: AWSDateTime
             }
-            
+          
           type CalendarEvent {
             id: ID!
             title: String!
@@ -108,20 +108,20 @@ resources:
             category: EventCategory!
             status: EventStatus!
           }
-            
+          
           type SearchResult {
             items: [Event!]!
             total: Int!
             nextToken: String
             facets: SearchFacets
           }
-            
+          
           type SearchFacets {
             categories: [FacetCount!]!
             locations: [FacetCount!]!
             tags: [FacetCount!]!
           }
-            
+          
           type FacetCount {
             value: String!
             count: Int!
@@ -185,30 +185,125 @@ resources:
             CANCELLED
           }
 
+          # Week 9: Notification Types
+          enum NotificationType {
+            REGISTRATION_CONFIRMED
+            WAITLIST_ADDED
+            WAITLIST_PROMOTED
+            REGISTRATION_CANCELLED
+            EVENT_UPDATED
+            EVENT_CANCELLED
+            EVENT_REMINDER_24H
+            EVENT_REMINDER_1H
+          }
+
+          enum NotificationPriority {
+            LOW
+            MEDIUM
+            HIGH
+          }
+
+          # Week 9: Notification Type
+          type Notification {
+            notificationId: ID!
+            userId: ID!
+            type: NotificationType!
+            priority: NotificationPriority!
+            title: String!
+            message: String!
+            actionUrl: String
+            read: Boolean!
+            readAt: AWSDateTime
+            createdAt: AWSDateTime!
+            data: AWSJSON
+          }
+
+          # Week 9: Notification Preferences Type
+          type NotificationPreferences {
+            userId: ID!
+            channels: NotificationChannels!
+            types: NotificationTypes!
+            doNotDisturb: DoNotDisturb!
+            frequency: NotificationFrequency!
+            unsubscribedAt: AWSDateTime
+            updatedAt: AWSDateTime!
+          }
+
+          type NotificationChannels {
+            email: Boolean!
+            inApp: Boolean!
+            sms: Boolean!
+          }
+
+          type NotificationTypes {
+            registrations: Boolean!
+            waitlist: Boolean!
+            reminders: Boolean!
+            eventUpdates: Boolean!
+            marketing: Boolean!
+          }
+
+          type DoNotDisturb {
+            enabled: Boolean!
+            startTime: String
+            endTime: String
+          }
+
+          type NotificationFrequency {
+            digestEnabled: Boolean!
+            digestFrequency: String
+            batchNotifications: BatchSettings
+          }
+
+          type BatchSettings {
+            enabled: Boolean!
+            intervalMinutes: Int
+          }
+
+          type NotificationList {
+            notifications: [Notification!]!
+            nextToken: String
+            unreadCount: Int!
+          }
+
           # Queries
           type Query {
             getEvent(id: ID!): Event
             listEvents(filter: EventFilter, limit: Int, nextToken: String): EventConnection!
             searchEvents(query: String!): [Event!]!
-            
+          
             advancedSearchEvents(input: SearchQueryInput!): SearchResult!
               @aws_cognito_user_pools
-            
+          
             getCalendarEvents(input: CalendarEventsInput!): [CalendarEvent!]!
               @aws_cognito_user_pools
-            
+          
             getEventBySlug(slug: String!): Event
               @aws_cognito_user_pools
-            
+          
             # Users
             getUser(id: ID!): User
             getCurrentUser: User!
-            
+          
             # Registrations
             getRegistration(id: ID!): Registration
             listMyRegistrations: [Registration!]!
             checkUserRegistration(eventId: ID!): Registration
             getEventCapacity(eventId: ID!): EventCapacityInfo!
+
+            # Week 9: Notifications
+            listNotifications(
+              limit: Int
+              nextToken: String
+              unreadOnly: Boolean
+            ): NotificationList!
+              @aws_cognito_user_pools
+
+            getNotificationPreferences: NotificationPreferences!
+              @aws_cognito_user_pools
+
+            getUnreadCount: Int!
+              @aws_cognito_user_pools
           }
 
           # Mutations
@@ -223,12 +318,31 @@ resources:
             declinePromotion(id: ID!): Registration!
             checkInAttendee(input: CheckInAttendeeInput!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
+
+            # Week 9: Notifications
+            markNotificationAsRead(notificationId: ID!): Notification!
+              @aws_cognito_user_pools
+
+            markAllNotificationsAsRead: Int!
+              @aws_cognito_user_pools
+
+            updateNotificationPreferences(preferences: UpdatePreferencesInput!): NotificationPreferences!
+              @aws_cognito_user_pools
           }
 
           # Subscriptions
           type Subscription {
             onEventUpdate(eventId: ID!): Event @aws_subscribe(mutations: ["updateEvent", "publishEvent"])
             onNewRegistration(eventId: ID!): Registration @aws_subscribe(mutations: ["registerForEvent"])
+
+            # Week 9: Notification Subscriptions
+            onNotificationCreated: Notification!
+              @aws_cognito_user_pools
+              @aws_subscribe(mutations: ["markNotificationAsRead"])
+
+            onNotificationRead: Notification!
+              @aws_cognito_user_pools
+              @aws_subscribe(mutations: ["markNotificationAsRead"])
           }
 
           # Input Types
@@ -281,14 +395,14 @@ resources:
             startDateAfter: AWSDateTime
             startDateBefore: AWSDateTime
           }
-            
+          
           input SearchQueryInput {
             query: String!
             filters: SearchFilters
             pagination: PaginationInput
             sort: SortInput
           }
-              
+          
           input SearchFilters {
             categories: [EventCategory!]
             locations: [String!]
@@ -297,24 +411,24 @@ resources:
             hasAvailableSeats: Boolean
             tags: [String!]
           }
-              
+          
           input PaginationInput {
             limit: Int
             nextToken: String
           }
-              
+          
           input SortInput {
             field: String!
             order: String!
           }
-              
+          
           input CalendarEventsInput {
             year: Int!
             month: Int!
             view: String
             filters: CalendarFiltersInput
           }
-              
+          
           input CalendarFiltersInput {
             categories: [EventCategory!]
             locations: [String!]
@@ -324,7 +438,46 @@ resources:
             registrationId: ID!
             qrCodeData: String!
           }
-            
+
+          # Week 9: Notification Preference Inputs
+          input UpdatePreferencesInput {
+            channels: NotificationChannelsInput
+            types: NotificationTypesInput
+            doNotDisturb: DoNotDisturbInput
+            frequency: NotificationFrequencyInput
+          }
+
+          input NotificationChannelsInput {
+            email: Boolean
+            inApp: Boolean
+            sms: Boolean
+          }
+
+          input NotificationTypesInput {
+            registrations: Boolean
+            waitlist: Boolean
+            reminders: Boolean
+            eventUpdates: Boolean
+            marketing: Boolean
+          }
+
+          input DoNotDisturbInput {
+            enabled: Boolean
+            startTime: String
+            endTime: String
+          }
+
+          input NotificationFrequencyInput {
+            digestEnabled: Boolean
+            digestFrequency: String
+            batchNotifications: BatchSettingsInput
+          }
+
+          input BatchSettingsInput {
+            enabled: Boolean
+            intervalMinutes: Int
+          }
+          
           # Connection Types
           type EventConnection {
             items: [Event!]!
