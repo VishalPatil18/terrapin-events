@@ -20,6 +20,15 @@ import {
   getUserIdFromIdentity,
   getUserGroupsFromIdentity,
 } from '../../../shared/types/appsync.types';
+import {
+  generateSlug,
+  generateShareableUrl,
+  generateSearchTerms,
+  generateLocationPK,
+  generateLocationSK,
+  calculateAvailableSeats,
+  isWaitlistAvailable,
+} from '../../../shared/utils/slug.utils';
 
 interface UpdateEventArgs {
   id: string;
@@ -158,10 +167,51 @@ export async function handler(
       }
     }
 
-    // 7. Update event
+    // 7. Regenerate search and discovery fields if needed
+    const enhancedInput = { ...input };
+
+    // Regenerate slug if title or startDateTime changed
+    if (input.title || input.startDateTime) {
+      const newTitle = input.title || currentEvent.title;
+      const newStartDateTime = input.startDateTime || currentEvent.startDateTime;
+      enhancedInput.slug = generateSlug(newTitle, newStartDateTime);
+      enhancedInput.shareableUrl = generateShareableUrl(enhancedInput.slug);
+    }
+
+    // Regenerate search terms if any searchable field changed
+    if (input.title || input.description || input.location || input.tags) {
+      enhancedInput.searchTerms = generateSearchTerms({
+        title: input.title || currentEvent.title,
+        description: input.description || currentEvent.description,
+        location: input.location || currentEvent.location,
+        tags: input.tags || currentEvent.tags,
+      });
+    }
+
+    // Regenerate GSI3 keys if location changed
+    if (input.location) {
+      const newLocation = input.location || currentEvent.location;
+      enhancedInput.GSI3PK = generateLocationPK(newLocation.building);
+      enhancedInput.GSI3SK = generateLocationSK(newLocation.room, eventId);
+    }
+
+    // Recalculate availability fields if capacity changed
+    if (input.capacity !== undefined) {
+      enhancedInput.availableSeats = calculateAvailableSeats(
+        input.capacity,
+        currentEvent.registeredCount
+      );
+      enhancedInput.waitlistAvailable = isWaitlistAvailable(
+        input.capacity,
+        currentEvent.registeredCount,
+        currentEvent.waitlistCount
+      );
+    }
+
+    // 8. Update event with enhanced input
     const updatedEvent = await updateEvent(
       eventId,
-      input,
+      enhancedInput,
       currentEvent.version
     );
 

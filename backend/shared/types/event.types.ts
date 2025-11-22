@@ -20,6 +20,15 @@ export interface Event extends BaseEntity {
   tags: string[];
   imageUrl?: string;
   version: number; // For optimistic locking
+  
+  slug?: string; // URL-friendly identifier
+  shareableUrl?: string; // Full shareable URL
+  searchTerms?: string; // Concatenated search text
+  availableSeats?: number; // Computed field
+  waitlistAvailable?: boolean; // Computed field
+  
+  GSI3PK?: string; // Format: "EVENT#LOCATION#{building}"
+  GSI3SK?: string; // Format: "ROOM#{room}#{eventId}"
 }
 
 /**
@@ -70,6 +79,15 @@ export interface UpdateEventInput {
   tags?: string[];
   imageUrl?: string;
   status?: EventStatus;
+  
+  // Week 7: Auto-generated fields (system-managed, not user input)
+  slug?: string;
+  shareableUrl?: string;
+  searchTerms?: string;
+  availableSeats?: number;
+  waitlistAvailable?: boolean;
+  GSI3PK?: string;
+  GSI3SK?: string;
 }
 
 /**
@@ -158,6 +176,103 @@ export interface EventCancelledEvent extends EventDomainEvent {
   eventType: EventDomainEventType.EVENT_CANCELLED;
   event: Event;
   reason?: string;
+}
+
+/**
+ * Search query input
+ */
+export interface SearchQueryInput {
+  query: string;
+  filters?: SearchFilters;
+  pagination?: PaginationInput;
+  sort?: SortInput;
+}
+
+/**
+ * Advanced search filters
+ */
+export interface SearchFilters {
+  categories?: EventCategory[];
+  locations?: string[]; // Building names
+  startDateAfter?: string;
+  startDateBefore?: string;
+  hasAvailableSeats?: boolean;
+  tags?: string[];
+}
+
+/**
+ * Pagination input
+ */
+export interface PaginationInput {
+  limit?: number;
+  nextToken?: string;
+}
+
+/**
+ * Sort input
+ */
+export interface SortInput {
+  field: 'startDateTime' | 'createdAt' | 'relevance';
+  order: 'asc' | 'desc';
+}
+
+/**
+ *  Search result with relevance scoring
+ */
+export interface SearchResult {
+  items: Event[];
+  total: number;
+  nextToken?: string;
+  facets?: SearchFacets;
+}
+
+/**
+ * Search facets for filter aggregations
+ */
+export interface SearchFacets {
+  categories: FacetCount[];
+  locations: FacetCount[];
+  tags: FacetCount[];
+}
+
+/**
+ * Facet count
+ */
+export interface FacetCount {
+  value: string;
+  count: number;
+}
+
+/**
+ * Calendar events input
+ */
+export interface CalendarEventsInput {
+  year: number;
+  month: number;
+  view?: 'month' | 'week' | 'day' | 'agenda';
+  filters?: CalendarFiltersInput;
+}
+
+/**
+ *  Calendar filters
+ */
+export interface CalendarFiltersInput {
+  categories?: EventCategory[];
+  locations?: string[];
+}
+
+/**
+ * Calendar event (simplified for calendar views)
+ */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  location: string;
+  availableSeats: number;
+  category: EventCategory;
+  status: EventStatus;
 }
 
 // Re-export EventCategory for backwards compatibility

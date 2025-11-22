@@ -32,7 +32,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
-.serverless/
 
 # Testing
 coverage/

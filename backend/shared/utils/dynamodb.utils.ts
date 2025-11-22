@@ -1,17 +1,15 @@
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
-  DynamoDBClient,
-  PutItemCommand,
-  GetItemCommand,
-  UpdateItemCommand,
-  DeleteItemCommand,
+  DynamoDBDocumentClient,
+  PutCommand,
+  GetCommand,
+  UpdateCommand,
   QueryCommand,
-  QueryCommandInput,
-} from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
-import { Event, EventFilter, VenueBooking } from '../types/event.types';
+} from '@aws-sdk/lib-dynamodb';
+import { Event, VenueBooking } from '../types/event.types';
 import { EventStatus } from '../types/common';
 
-const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' }));
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'terrapin-events-dev';
 
 /**
@@ -40,6 +38,8 @@ export function eventToDynamoDBItem(event: Partial<Event>): Record<string, any> 
     GSI1SK: event.startDateTime,
     GSI2PK: `EVENT#CATEGORY#${event.category}`,
     GSI2SK: event.startDateTime,
+    GSI3PK: event.GSI3PK,
+    GSI3SK: event.GSI3SK,
     entityType: 'Event',
     id: event.id,
     title: event.title,
@@ -56,6 +56,11 @@ export function eventToDynamoDBItem(event: Partial<Event>): Record<string, any> 
     tags: event.tags || [],
     imageUrl: event.imageUrl,
     version: event.version || 1,
+    slug: event.slug,
+    shareableUrl: event.shareableUrl,
+    searchTerms: event.searchTerms,
+    availableSeats: event.availableSeats,
+    waitlistAvailable: event.waitlistAvailable,
     createdAt: event.createdAt || timestamp,
     updatedAt: timestamp,
   };
@@ -72,6 +77,8 @@ export function dynamoDBItemToEvent(item: Record<string, any>): Event {
     GSI1SK: item.GSI1SK,
     GSI2PK: item.GSI2PK,
     GSI2SK: item.GSI2SK,
+    GSI3PK: item.GSI3PK,
+    GSI3SK: item.GSI3SK,
     id: item.id,
     title: item.title,
     description: item.description,
@@ -87,6 +94,11 @@ export function dynamoDBItemToEvent(item: Record<string, any>): Event {
     tags: item.tags,
     imageUrl: item.imageUrl,
     version: item.version,
+    slug: item.slug,
+    shareableUrl: item.shareableUrl,
+    searchTerms: item.searchTerms,
+    availableSeats: item.availableSeats,
+    waitlistAvailable: item.waitlistAvailable,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -99,9 +111,9 @@ export async function putEvent(event: Event): Promise<Event> {
   const item = eventToDynamoDBItem(event);
 
   await client.send(
-    new PutItemCommand({
+    new PutCommand({
       TableName: TABLE_NAME,
-      Item: marshall(item, { removeUndefinedValues: true }),
+      Item: item,
     })
   );
 
@@ -113,12 +125,12 @@ export async function putEvent(event: Event): Promise<Event> {
  */
 export async function getEvent(eventId: string): Promise<Event | null> {
   const response = await client.send(
-    new GetItemCommand({
+    new GetCommand({
       TableName: TABLE_NAME,
-      Key: marshall({
+      Key: {
         PK: `EVENT#${eventId}`,
         SK: 'METADATA',
-      }),
+      },
     })
   );
 
@@ -126,7 +138,7 @@ export async function getEvent(eventId: string): Promise<Event | null> {
     return null;
   }
 
-  return dynamoDBItemToEvent(unmarshall(response.Item));
+  return dynamoDBItemToEvent(response.Item);
 }
 
 /**
@@ -163,18 +175,16 @@ export async function updateEvent(
   expressionAttributeValues[':currentVersion'] = currentVersion;
 
   const response = await client.send(
-    new UpdateItemCommand({
+    new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: marshall({
+      Key: {
         PK: `EVENT#${eventId}`,
         SK: 'METADATA',
-      }),
+      },
       UpdateExpression: `SET ${updateExpressionParts.join(', ')}`,
       ConditionExpression: '#version = :currentVersion',
       ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: marshall(expressionAttributeValues, {
-        removeUndefinedValues: true,
-      }),
+      ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'ALL_NEW',
     })
   );
@@ -183,7 +193,7 @@ export async function updateEvent(
     throw new Error('Failed to update event');
   }
 
-  return dynamoDBItemToEvent(unmarshall(response.Attributes));
+  return dynamoDBItemToEvent(response.Attributes);
 }
 
 /**
@@ -196,23 +206,23 @@ export async function updateEventStatus(
   const timestamp = new Date().toISOString();
 
   const response = await client.send(
-    new UpdateItemCommand({
+    new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: marshall({
+      Key: {
         PK: `EVENT#${eventId}`,
         SK: 'METADATA',
-      }),
+      },
       UpdateExpression: 'SET #status = :status, #updatedAt = :updatedAt, #version = #version + :inc',
       ExpressionAttributeNames: {
         '#status': 'status',
         '#updatedAt': 'updatedAt',
         '#version': 'version',
       },
-      ExpressionAttributeValues: marshall({
+      ExpressionAttributeValues: {
         ':status': status,
         ':updatedAt': timestamp,
         ':inc': 1,
-      }),
+      },
       ReturnValues: 'ALL_NEW',
     })
   );
@@ -221,7 +231,7 @@ export async function updateEventStatus(
     throw new Error('Failed to update event status');
   }
 
-  return dynamoDBItemToEvent(unmarshall(response.Attributes));
+  return dynamoDBItemToEvent(response.Attributes);
 }
 
 /**
@@ -231,21 +241,21 @@ export async function deleteEvent(eventId: string): Promise<void> {
   const timestamp = new Date().toISOString();
 
   await client.send(
-    new UpdateItemCommand({
+    new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: marshall({
+      Key: {
         PK: `EVENT#${eventId}`,
         SK: 'METADATA',
-      }),
+      },
       UpdateExpression: 'SET #status = :status, #updatedAt = :updatedAt',
       ExpressionAttributeNames: {
         '#status': 'status',
         '#updatedAt': 'updatedAt',
       },
-      ExpressionAttributeValues: marshall({
+      ExpressionAttributeValues: {
         ':status': EventStatus.CANCELLED,
         ':updatedAt': timestamp,
-      }),
+      },
     })
   );
 }
@@ -259,29 +269,23 @@ export async function queryEventsByDateRange(
   limit: number = 20,
   nextToken?: string
 ): Promise<{ items: Event[]; nextToken?: string }> {
-  const queryInput: QueryCommandInput = {
+  const queryInput: any = {
     TableName: TABLE_NAME,
     IndexName: 'GSI1',
     KeyConditionExpression: 'GSI1PK = :pk',
-    ExpressionAttributeValues: marshall({
+    ExpressionAttributeValues: {
       ':pk': 'EVENT#DATE',
-    }),
+    },
     Limit: limit,
   };
 
   if (endDate) {
     queryInput.KeyConditionExpression += ' AND GSI1SK BETWEEN :start AND :end';
-    queryInput.ExpressionAttributeValues = marshall({
-      ':pk': 'EVENT#DATE',
-      ':start': startDate,
-      ':end': endDate,
-    });
+    queryInput.ExpressionAttributeValues[':start'] = startDate;
+    queryInput.ExpressionAttributeValues[':end'] = endDate;
   } else {
     queryInput.KeyConditionExpression += ' AND GSI1SK >= :start';
-    queryInput.ExpressionAttributeValues = marshall({
-      ':pk': 'EVENT#DATE',
-      ':start': startDate,
-    });
+    queryInput.ExpressionAttributeValues[':start'] = startDate;
   }
 
   if (nextToken) {
@@ -293,7 +297,7 @@ export async function queryEventsByDateRange(
   const response = await client.send(new QueryCommand(queryInput));
 
   const items = (response.Items || []).map((item) => 
-    dynamoDBItemToEvent(unmarshall(item))
+    dynamoDBItemToEvent(item)
   );
 
   let returnToken: string | undefined;
@@ -314,13 +318,13 @@ export async function queryEventsByCategory(
   limit: number = 20,
   nextToken?: string
 ): Promise<{ items: Event[]; nextToken?: string }> {
-  const queryInput: QueryCommandInput = {
+  const queryInput: any = {
     TableName: TABLE_NAME,
     IndexName: 'GSI2',
     KeyConditionExpression: 'GSI2PK = :pk',
-    ExpressionAttributeValues: marshall({
+    ExpressionAttributeValues: {
       ':pk': `EVENT#CATEGORY#${category}`,
-    }),
+    },
     Limit: limit,
   };
 
@@ -333,7 +337,7 @@ export async function queryEventsByCategory(
   const response = await client.send(new QueryCommand(queryInput));
 
   const items = (response.Items || []).map((item) => 
-    dynamoDBItemToEvent(unmarshall(item))
+    dynamoDBItemToEvent(item)
   );
 
   let returnToken: string | undefined;
@@ -371,9 +375,34 @@ export async function createVenueBooking(
   };
 
   await client.send(
-    new PutItemCommand({
+    new PutCommand({
       TableName: TABLE_NAME,
-      Item: marshall(bookingItem, { removeUndefinedValues: true }),
+      Item: bookingItem,
+    })
+  );
+}
+
+/**
+ * Create slug lookup item for URL-based queries
+ * Week 7: Enable getEventBySlug queries
+ */
+export async function createSlugLookup(
+  slug: string,
+  eventId: string
+): Promise<void> {
+  const lookupItem = {
+    PK: `EVENT#SLUG#${slug}`,
+    SK: 'METADATA',
+    entityType: 'SlugLookup',
+    slug,
+    eventId,
+    createdAt: new Date().toISOString(),
+  };
+
+  await client.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: lookupItem,
     })
   );
 }
@@ -398,12 +427,12 @@ export async function checkVenueConflict(
       ExpressionAttributeNames: {
         '#status': 'status',
       },
-      ExpressionAttributeValues: marshall({
+      ExpressionAttributeValues: {
         ':pk': `VENUE#${venueId}`,
         ':startKey': `BOOKING#${new Date(Date.parse(startDateTime) - 24 * 60 * 60 * 1000).toISOString()}`,
         ':endKey': `BOOKING#${new Date(Date.parse(endDateTime) + 24 * 60 * 60 * 1000).toISOString()}`,
         ':status': 'ACTIVE',
-      }),
+      },
     })
   );
 
@@ -416,7 +445,7 @@ export async function checkVenueConflict(
   const requestEnd = new Date(endDateTime).getTime();
 
   for (const item of response.Items) {
-    const booking = unmarshall(item) as VenueBooking;
+    const booking = item as VenueBooking;
 
     // Skip if this is the same event (for updates)
     if (excludeEventId && booking.eventId === excludeEventId) {

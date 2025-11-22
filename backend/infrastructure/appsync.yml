@@ -66,7 +66,11 @@ resources:
             tags: [String!]
             imageUrl: String
             createdAt: AWSDateTime!
-            updatedAt: AWSDateTime!
+            updatedAt: AWSDateTime!            
+            slug: String
+            shareableUrl: String
+            availableSeats: Int
+            waitlistAvailable: Boolean
           }
 
           # User Type
@@ -85,11 +89,52 @@ resources:
             id: ID!
             userId: ID!
             eventId: ID!
+            event: Event
             status: RegistrationStatus!
             qrCode: String!
             waitlistPosition: Int
+            promotionDeadline: AWSDateTime
             registeredAt: AWSDateTime!
             attendedAt: AWSDateTime
+            }
+          
+          type CalendarEvent {
+            id: ID!
+            title: String!
+            start: AWSDateTime!
+            end: AWSDateTime!
+            location: String!
+            availableSeats: Int!
+            category: EventCategory!
+            status: EventStatus!
+          }
+          
+          type SearchResult {
+            items: [Event!]!
+            total: Int!
+            nextToken: String
+            facets: SearchFacets
+          }
+          
+          type SearchFacets {
+            categories: [FacetCount!]!
+            locations: [FacetCount!]!
+            tags: [FacetCount!]!
+          }
+          
+          type FacetCount {
+            value: String!
+            count: Int!
+          }
+          
+          # Event Capacity Info Type
+          type EventCapacityInfo {
+            eventId: ID!
+            capacity: Int!
+            registeredCount: Int!
+            waitlistCount: Int!
+            availableSeats: Int!
+            isFull: Boolean!
           }
 
           # Location Type
@@ -140,15 +185,125 @@ resources:
             CANCELLED
           }
 
+          # Week 9: Notification Types
+          enum NotificationType {
+            REGISTRATION_CONFIRMED
+            WAITLIST_ADDED
+            WAITLIST_PROMOTED
+            REGISTRATION_CANCELLED
+            EVENT_UPDATED
+            EVENT_CANCELLED
+            EVENT_REMINDER_24H
+            EVENT_REMINDER_1H
+          }
+
+          enum NotificationPriority {
+            LOW
+            MEDIUM
+            HIGH
+          }
+
+          # Week 9: Notification Type
+          type Notification {
+            notificationId: ID!
+            userId: ID!
+            type: NotificationType!
+            priority: NotificationPriority!
+            title: String!
+            message: String!
+            actionUrl: String
+            read: Boolean!
+            readAt: AWSDateTime
+            createdAt: AWSDateTime!
+            data: AWSJSON
+          }
+
+          # Week 9: Notification Preferences Type
+          type NotificationPreferences {
+            userId: ID!
+            channels: NotificationChannels!
+            types: NotificationTypes!
+            doNotDisturb: DoNotDisturb!
+            frequency: NotificationFrequency!
+            unsubscribedAt: AWSDateTime
+            updatedAt: AWSDateTime!
+          }
+
+          type NotificationChannels {
+            email: Boolean!
+            inApp: Boolean!
+            sms: Boolean!
+          }
+
+          type NotificationTypes {
+            registrations: Boolean!
+            waitlist: Boolean!
+            reminders: Boolean!
+            eventUpdates: Boolean!
+            marketing: Boolean!
+          }
+
+          type DoNotDisturb {
+            enabled: Boolean!
+            startTime: String
+            endTime: String
+          }
+
+          type NotificationFrequency {
+            digestEnabled: Boolean!
+            digestFrequency: String
+            batchNotifications: BatchSettings
+          }
+
+          type BatchSettings {
+            enabled: Boolean!
+            intervalMinutes: Int
+          }
+
+          type NotificationList {
+            notifications: [Notification!]!
+            nextToken: String
+            unreadCount: Int!
+          }
+
           # Queries
           type Query {
             getEvent(id: ID!): Event
             listEvents(filter: EventFilter, limit: Int, nextToken: String): EventConnection!
             searchEvents(query: String!): [Event!]!
+          
+            advancedSearchEvents(input: SearchQueryInput!): SearchResult!
+              @aws_cognito_user_pools
+          
+            getCalendarEvents(input: CalendarEventsInput!): [CalendarEvent!]!
+              @aws_cognito_user_pools
+          
+            getEventBySlug(slug: String!): Event
+              @aws_cognito_user_pools
+          
+            # Users
             getUser(id: ID!): User
             getCurrentUser: User!
+          
+            # Registrations
             getRegistration(id: ID!): Registration
             listMyRegistrations: [Registration!]!
+            checkUserRegistration(eventId: ID!): Registration
+            getEventCapacity(eventId: ID!): EventCapacityInfo!
+
+            # Week 9: Notifications
+            listNotifications(
+              limit: Int
+              nextToken: String
+              unreadOnly: Boolean
+            ): NotificationList!
+              @aws_cognito_user_pools
+
+            getNotificationPreferences: NotificationPreferences!
+              @aws_cognito_user_pools
+
+            getUnreadCount: Int!
+              @aws_cognito_user_pools
           }
 
           # Mutations
@@ -157,16 +312,37 @@ resources:
             updateEvent(id: ID!, input: UpdateEventInput!): Event!
             deleteEvent(id: ID!): Event!
             publishEvent(id: ID!): Event!
-            registerForEvent(eventId: ID!): Registration!
-            cancelRegistration(id: ID!): Registration!
-            checkInAttendee(registrationId: ID!): Registration!
+            registerForEvent(eventId: ID!, idempotencyKey: String): Registration!
+            cancelRegistration(registrationId: ID!): Registration!
+            acceptPromotion(id: ID!): Registration!
+            declinePromotion(id: ID!): Registration!
+            checkInAttendee(input: CheckInAttendeeInput!): Registration!
             updateUserProfile(input: UpdateUserInput!): User!
+
+            # Week 9: Notifications
+            markNotificationAsRead(notificationId: ID!): Notification!
+              @aws_cognito_user_pools
+
+            markAllNotificationsAsRead: Int!
+              @aws_cognito_user_pools
+
+            updateNotificationPreferences(preferences: UpdatePreferencesInput!): NotificationPreferences!
+              @aws_cognito_user_pools
           }
 
           # Subscriptions
           type Subscription {
             onEventUpdate(eventId: ID!): Event @aws_subscribe(mutations: ["updateEvent", "publishEvent"])
             onNewRegistration(eventId: ID!): Registration @aws_subscribe(mutations: ["registerForEvent"])
+
+            # Week 9: Notification Subscriptions
+            onNotificationCreated: Notification!
+              @aws_cognito_user_pools
+              @aws_subscribe(mutations: ["markNotificationAsRead"])
+
+            onNotificationRead: Notification!
+              @aws_cognito_user_pools
+              @aws_subscribe(mutations: ["markNotificationAsRead"])
           }
 
           # Input Types
@@ -219,7 +395,89 @@ resources:
             startDateAfter: AWSDateTime
             startDateBefore: AWSDateTime
           }
+          
+          input SearchQueryInput {
+            query: String!
+            filters: SearchFilters
+            pagination: PaginationInput
+            sort: SortInput
+          }
+          
+          input SearchFilters {
+            categories: [EventCategory!]
+            locations: [String!]
+            startDateAfter: AWSDateTime
+            startDateBefore: AWSDateTime
+            hasAvailableSeats: Boolean
+            tags: [String!]
+          }
+          
+          input PaginationInput {
+            limit: Int
+            nextToken: String
+          }
+          
+          input SortInput {
+            field: String!
+            order: String!
+          }
+          
+          input CalendarEventsInput {
+            year: Int!
+            month: Int!
+            view: String
+            filters: CalendarFiltersInput
+          }
+          
+          input CalendarFiltersInput {
+            categories: [EventCategory!]
+            locations: [String!]
+          }
+          
+          input CheckInAttendeeInput {
+            registrationId: ID!
+            qrCodeData: String!
+          }
 
+          # Week 9: Notification Preference Inputs
+          input UpdatePreferencesInput {
+            channels: NotificationChannelsInput
+            types: NotificationTypesInput
+            doNotDisturb: DoNotDisturbInput
+            frequency: NotificationFrequencyInput
+          }
+
+          input NotificationChannelsInput {
+            email: Boolean
+            inApp: Boolean
+            sms: Boolean
+          }
+
+          input NotificationTypesInput {
+            registrations: Boolean
+            waitlist: Boolean
+            reminders: Boolean
+            eventUpdates: Boolean
+            marketing: Boolean
+          }
+
+          input DoNotDisturbInput {
+            enabled: Boolean
+            startTime: String
+            endTime: String
+          }
+
+          input NotificationFrequencyInput {
+            digestEnabled: Boolean
+            digestFrequency: String
+            batchNotifications: BatchSettingsInput
+          }
+
+          input BatchSettingsInput {
+            enabled: Boolean
+            intervalMinutes: Int
+          }
+          
           # Connection Types
           type EventConnection {
             items: [Event!]!
@@ -324,15 +582,17 @@ resources:
         RequestMappingTemplate: |
           {
             "version": "2018-05-29",
-            "operation": "Scan",
-            "limit": $util.defaultIfNull($ctx.args.limit, 20),
-            "nextToken": $util.toJson($util.defaultIfNullOrBlank($ctx.args.nextToken, null)),
-            "filter": {
-              "expression": "begins_with(PK, :pk)",
+            "operation": "Query",
+            "index": "GSI1",
+            "query": {
+              "expression": "GSI1PK = :pk",
               "expressionValues": {
-                ":pk": $util.dynamodb.toDynamoDBJson("EVENT#")
+                ":pk": $util.dynamodb.toDynamoDBJson("EVENT#DATE")
               }
-            }
+            },
+            "limit": $util.defaultIfNull($ctx.args.limit, 20),
+            "scanIndexForward": true,
+            "nextToken": $util.toJson($util.defaultIfNullOrBlank($ctx.args.nextToken, null))
           }
         ResponseMappingTemplate: |
           {
@@ -354,6 +614,48 @@ resources:
             "operation": "GetItem",
             "key": {
               "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.identity.sub"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+    # Field Resolver: Registration.event
+    # Resolves the event field when querying a registration
+    RegistrationEventResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Registration
+        FieldName: event
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("EVENT#$ctx.source.eventId"),
+              "SK": $util.dynamodb.toDynamoDBJson("METADATA")
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+    # Field Resolver: Event.organizer
+    # Resolves the organizer User field when querying an event
+    EventOrganizerResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Event
+        FieldName: organizer
+        DataSourceName: !GetAtt DynamoDBDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "GetItem",
+            "key": {
+              "PK": $util.dynamodb.toDynamoDBJson("USER#$ctx.source.organizerId"),
               "SK": $util.dynamodb.toDynamoDBJson("METADATA")
             }
           }

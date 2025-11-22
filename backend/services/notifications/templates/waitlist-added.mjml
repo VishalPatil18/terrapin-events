@@ -1,0 +1,138 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{eventTitle}} - Waitlist Confirmation</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="14px" color="#555555" line-height="24px" />
+      <mj-button background-color="#E03A3E" color="#ffffff" font-weight="bold" border-radius="4px" padding="12px 30px" />
+    </mj-attributes>
+    <mj-style>
+      .umd-red { color: #E03A3E; }
+      .umd-gold { color: #FFD520; }
+      .card { background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin: 10px 0; }
+    </mj-style>
+  </mj-head>
+  
+  <mj-body background-color="#f4f4f4">
+    
+    <!-- Header Section with UMD Branding -->
+    <mj-section background-color="#E03A3E" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="28px" font-weight="bold" padding="0">
+          ⏳ You're on the Waitlist!
+        </mj-text>
+        <mj-text align="center" color="#FFD520" font-size="16px" padding="10px 0 0 0">
+          Terrapin Events
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Greeting -->
+    <mj-section background-color="#ffffff" padding="40px 25px 20px">
+      <mj-column>
+        <mj-text font-size="18px" color="#333333" font-weight="bold">
+          Hi {{userName}},
+        </mj-text>
+        <mj-text font-size="16px" color="#555555" line-height="26px">
+          Thank you for your interest in <strong>{{eventTitle}}</strong>! The event is currently full, but we've added you to the waitlist. We'll notify you immediately if a spot opens up.
+        </mj:text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Event Details Card -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#f9f9f9" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#E03A3E" padding="0 0 15px 0">
+          📅 Event Details
+        </mj-text>
+        <mj-text font-size="15px" line-height="28px">
+          <strong>Event:</strong> {{eventTitle}}<br/>
+          <strong>Date:</strong> {{formatDate eventDate}}<br/>
+          <strong>Time:</strong> {{eventTime}}<br/>
+          <strong>Location:</strong> {{eventLocation}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Waitlist Status Card -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#fff9e6" border="2px solid #FFD520" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#333333" padding="0 0 15px 0">
+          📋 Your Waitlist Status
+        </mj-text>
+        <mj-text font-size="15px" line-height="28px">
+          <strong>Position:</strong> #{{waitlistPosition}}<br/>
+          <strong>Waitlist ID:</strong> {{waitlistId}}<br/>
+          <strong>Added:</strong> {{formatDate createdAt}}
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" padding="15px 0 0 0">
+          You'll be automatically notified if a spot becomes available. If promoted, you'll have 24 hours to confirm your registration.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- What Happens Next -->
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column border-top="2px solid #f0f0f0" padding="30px 0 0 0">
+        <mj-text font-size="16px" color="#333333" font-weight="bold">
+          What Happens Next?
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" line-height="24px">
+          • We'll email you immediately if a spot opens up<br/>
+          • You'll have 24 hours to confirm your registration<br/>
+          • Spots are offered on a first-come, first-served basis<br/>
+          • You can remove yourself from the waitlist anytime
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- CTA Button -->
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column>
+        <mj-text align="center" font-size="14px" color="#666666" padding="0 0 20px 0">
+          View event details and manage your waitlist status:
+        </mj-text>
+        <mj-button href="{{eventUrl}}" align="center">
+          View Event Details
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Alternative Events Section -->
+    <mj-section background-color="#f9f9f9" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="16px" color="#333333" font-weight="bold" align="center">
+          Looking for Similar Events?
+        </mj-text>
+        <mj-text font-size="14px" color="#666666" align="center" padding="10px 0 20px 0">
+          Explore other upcoming events while you wait
+        </mj-text>
+        <mj-button href="{{browseEventsUrl}}" background-color="#ffffff" color="#E03A3E" border="2px solid #E03A3E" align="center">
+          Browse Events
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#333333" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="13px" line-height="22px">
+          <strong>Terrapin Events</strong><br/>
+          University of Maryland<br/>
+          College Park, MD 20742
+        </mj-text>
+        <mj-divider border-color="#555555" border-width="1px" padding="20px 0" />
+        <mj-text align="center" font-size="12px" color="#999999" line-height="20px">
+          You're receiving this email because you joined the waitlist for an event on Terrapin Events.<br/>
+          <a href="{{preferencesUrl}}" style="color: #FFD520; text-decoration: none;">Notification Preferences</a> | 
+          <a href="{{unsubscribeUrl}}" style="color: #FFD520; text-decoration: none;">Unsubscribe</a> | 
+          <a href="{{supportUrl}}" style="color: #FFD520; text-decoration: none;">Support</a>
+        </mj-text>
+        <mj-text align="center" font-size="11px" color="#777777" padding="15px 0 0 0">
+          © {{currentYear}} University of Maryland. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>

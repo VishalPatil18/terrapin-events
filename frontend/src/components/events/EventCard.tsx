@@ -5,7 +5,6 @@
  */
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Calendar, MapPin, Users } from 'lucide-react';
 import { Event, formatEventDateTime, getAvailableSeats, isEventFull, getEventCategoryLabel } from '@/types/event.types';
 
@@ -27,13 +26,15 @@ export function EventCard({ event, className = '' }: EventCardProps) {
       className={`group block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden ${className}`}
     >
       {/* Image Section */}
-      <div className="relative h-60 overflow-hidden">
-        <Image
+      <div className="relative h-60 overflow-hidden bg-gray-200">
+        <img
           src={imageUrl}
           alt={event.title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            // Hide broken image but keep container
+            e.currentTarget.style.display = 'none';
+          }}
         />
         
         {/* Free Badge - shown if no ticket required or $0 */}

@@ -1,0 +1,171 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{eventTitle}} - Event Updated</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="14px" color="#555555" line-height="24px" />
+      <mj-button background-color="#E03A3E" color="#ffffff" font-weight="bold" border-radius="4px" padding="12px 30px" />
+    </mj-attributes>
+    <mj-style>
+      .umd-red { color: #E03A3E; }
+      .umd-gold { color: #FFD520; }
+      .card { background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin: 10px 0; }
+      .updated { background-color: #fff3cd; padding: 5px 10px; border-radius: 4px; }
+    </mj-style>
+  </mj-head>
+  
+  <mj-body background-color="#f4f4f4">
+    
+    <!-- Header Section with UMD Branding -->
+    <mj-section background-color="#ffc107" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#000000" font-size="28px" font-weight="bold" padding="0">
+          ⚠️ Event Updated
+        </mj-text>
+        <mj-text align="center" color="#000000" font-size="16px" padding="10px 0 0 0">
+          Terrapin Events
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Important Update Notice -->
+    <mj-section background-color="#fff3cd" border="3px solid #ffc107" padding="20px 25px">
+      <mj-column>
+        <mj-text font-size="16px" color="#856404" font-weight="bold" align="center">
+          Important: Event details have changed
+        </mj-text>
+        <mj-text font-size="14px" color="#856404" align="center" padding="10px 0 0 0">
+          Please review the updates below
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Greeting -->
+    <mj-section background-color="#ffffff" padding="40px 25px 20px">
+      <mj-column>
+        <mj-text font-size="18px" color="#333333" font-weight="bold">
+          Hi {{userName}},
+        </mj-text>
+        <mj-text font-size="16px" color="#555555" line-height="26px">
+          The event organizer has made updates to <strong>{{eventTitle}}</strong>. Please review the changes below to ensure you have the latest information.
+        </mj:text>
+      </mj-column>
+    </mj-section>
+
+    <!-- What Changed -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#f8d7da" border="2px solid #dc3545" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#721c24" padding="0 0 15px 0">
+          📝 What Changed:
+        </mj-text>
+        <mj-text font-size="15px" color="#721c24" line-height="28px">
+          {{#each changes}}
+          • <strong>{{this.field}}:</strong> {{this.description}}<br/>
+          {{/each}}
+        </mj-text>
+        {{#if updateMessage}}
+        <mj-text font-size="14px" color="#721c24" padding="15px 0 0 0">
+          <strong>Message from organizer:</strong><br/>
+          {{updateMessage}}
+        </mj-text>
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    <!-- Updated Event Details Card -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#f9f9f9" border-radius="8px" padding="25px">
+        <mj-text font-size="18px" font-weight="bold" color="#E03A3E" padding="0 0 15px 0">
+          📅 Updated Event Details
+        </mj-text>
+        <mj-text font-size="15px" line-height="28px">
+          <strong>Event:</strong> {{eventTitle}}{{#if titleChanged}}<span class="updated">UPDATED</span>{{/if}}<br/>
+          <strong>Date:</strong> {{formatDate eventDate}}{{#if dateChanged}}<span class="updated">UPDATED</span>{{/if}}<br/>
+          <strong>Time:</strong> {{eventTime}}{{#if timeChanged}}<span class="updated">UPDATED</span>{{/if}}<br/>
+          <strong>Location:</strong> {{eventLocation}}{{#if locationChanged}}<span class="updated">UPDATED</span>{{/if}}<br/>
+          {{#if eventRoom}}<strong>Room:</strong> {{eventRoom}}<br/>{{/if}}
+          {{#if capacityChanged}}<strong>Capacity:</strong> {{capacity}}{{#if capacityChanged}}<span class="updated">UPDATED</span>{{/if}}<br/>{{/if}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Registration Still Valid -->
+    <mj-section background-color="#ffffff" padding="0 25px 30px">
+      <mj-column background-color="#e8f5e9" border="2px solid #28a745" border-radius="8px" padding="25px">
+        <mj-text font-size="16px" font-weight="bold" color="#28a745" padding="0 0 15px 0">
+          ✅ Your Registration is Still Valid
+        </mj-text>
+        <mj-text font-size="14px" color="#666666">
+          No action is required. Your registration and ticket remain valid with these updates. Your QR code has not changed.
+        </mj-text>
+        {{#if qrCodeUrl}}
+        <mj-text font-size="14px" color="#666666" padding="15px 0 10px 0" align="center">
+          Your ticket QR code:
+        </mj-text>
+        <mj-image src="{{qrCodeUrl}}" alt="Event Check-in QR Code" width="200px" padding="10px 0" />
+        {{/if}}
+      </mj-column>
+    </mj-section>
+
+    <!-- Call to Action -->
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column>
+        <mj-text align="center" font-size="14px" color="#666666" padding="0 0 20px 0">
+          Review the full event details:
+        </mj-text>
+        <mj-button href="{{eventUrl}}" align="center">
+          View Event Page
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Can't Attend -->
+    <mj-section background-color="#ffffff" padding="0 25px 40px">
+      <mj-column border-top="2px solid #f0f0f0" padding="30px 0 0 0">
+        <mj-text font-size="14px" color="#333333" font-weight="bold">
+          Can No Longer Attend?
+        </mj-text>
+        <mj-text font-size="13px" color="#666666" line-height="22px">
+          If these changes affect your ability to attend, please cancel your registration so someone else can take your spot.
+        </mj-text>
+        <mj-text font-size="13px" color="#999999" padding="15px 0 0 0">
+          <a href="{{cancelUrl}}" style="color: #dc3545; text-decoration: none;">Cancel My Registration</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Contact Organizer -->
+    <mj-section background-color="#f9f9f9" padding="30px 25px">
+      <mj-column>
+        <mj-text font-size="14px" color="#333333" font-weight="bold" align="center">
+          Questions About the Changes?
+        </mj-text>
+        <mj-text font-size="13px" color="#666666" align="center" padding="10px 0">
+          {{#if organizerEmail}}Contact: {{organizerEmail}}{{else}}Visit the event page for organizer contact information{{/if}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#333333" padding="30px 20px">
+      <mj-column>
+        <mj-text align="center" color="#ffffff" font-size="13px" line-height="22px">
+          <strong>Terrapin Events</strong><br/>
+          University of Maryland<br/>
+          College Park, MD 20742
+        </mj-text>
+        <mj-divider border-color="#555555" border-width="1px" padding="20px 0" />
+        <mj-text align="center" font-size="12px" color="#999999" line-height="20px">
+          You're receiving this email because you're registered for this event.<br/>
+          <a href="{{preferencesUrl}}" style="color: #FFD520; text-decoration: none;">Notification Preferences</a> | 
+          <a href="{{unsubscribeUrl}}" style="color: #FFD520; text-decoration: none;">Unsubscribe</a> | 
+          <a href="{{supportUrl}}" style="color: #FFD520; text-decoration: none;">Support</a>
+        </mj-text>
+        <mj-text align="center" font-size="11px" color="#777777" padding="15px 0 0 0">
+          © {{currentYear}} University of Maryland. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>

@@ -1,0 +1,43 @@
+{
+  "name": "tems-notifications",
+  "version": "1.0.0",
+  "description": "TEMS Notification Service - Email and In-App Notifications",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:prod": "serverless deploy --stage prod",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f processNotification --tail"
+  },
+  "keywords": [
+    "tems",
+    "notifications",
+    "email",
+    "ses",
+    "serverless"
+  ],
+  "author": "TEMS Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.926.0",
+    "@aws-sdk/client-eventbridge": "^3.926.0",
+    "@aws-sdk/client-ses": "^3.926.0",
+    "@aws-sdk/client-sqs": "^3.926.0",
+    "@aws-sdk/lib-dynamodb": "^3.926.0",
+    "handlebars": "^4.7.8",
+    "mjml": "^4.15.3",
+    "nanoid": "^3.3.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.157",
+    "@types/handlebars": "^4.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/mjml": "^4.7.4",
+    "@types/node": "^24.10.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3"
+  }
+}

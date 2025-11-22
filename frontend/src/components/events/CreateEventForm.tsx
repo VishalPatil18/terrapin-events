@@ -37,7 +37,7 @@ export function CreateEventForm({
 
   const totalSteps = 5;
 
-  const methods = useForm<z.input<typeof createEventSchema>, any, z.output<typeof createEventSchema>>({
+  const methods = useForm<z.input<typeof createEventSchema>, unknown, z.output<typeof createEventSchema>>({
     resolver: zodResolver(createEventSchema),
     defaultValues: defaultValues || {
       title: '',

@@ -1,0 +1,143 @@
+service: terrapin-events-search-service
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    AWS_ACCOUNT_ID: ${aws:accountId}
+    DYNAMODB_TABLE_NAME:
+      Fn::ImportValue: ${self:provider.stage}-TemsTableName
+    
+  iam:
+    role:
+      statements:
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+          Resource:
+            - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+            - Fn::Join:
+                - ''
+                - - Fn::ImportValue: ${self:provider.stage}-TemsTableArn
+                  - '/index/*'
+
+custom:
+  cognitoUserPoolArn:
+    Fn::ImportValue: ${self:provider.stage}-CognitoUserPoolArn
+
+# Native TypeScript support in Serverless Framework v4
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    format: cjs
+    external:
+      - '@aws-sdk/*'
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!.build/**'
+    - '!__tests__/**'
+
+functions:
+  # Search Events Handler
+  searchEvents:
+    handler: handlers/searchEvents.handler
+    name: ${self:service}-searchEvents-${self:provider.stage}
+    description: Full-text search with relevance scoring and faceted filtering
+    memorySize: 1024
+    timeout: 29
+    environment:
+      FUNCTION_NAME: searchEvents
+    events:
+      - http:
+          path: search/events
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Get Calendar Events Handler
+  getCalendarEvents:
+    handler: handlers/getCalendarEvents.handler
+    name: ${self:service}-getCalendarEvents-${self:provider.stage}
+    description: Retrieve events for calendar views with date-range queries
+    memorySize: 512
+    timeout: 15
+    environment:
+      FUNCTION_NAME: getCalendarEvents
+    events:
+      - http:
+          path: calendar/events
+          method: post
+          cors: true
+          authorizer:
+            name: CognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+  # Get Event By Slug Handler
+  getEventBySlug:
+    handler: handlers/getEventBySlug.handler
+    name: ${self:service}-getEventBySlug-${self:provider.stage}
+    description: Retrieve event by URL slug with caching
+    memorySize: 256
+    timeout: 10
+    environment:
+      FUNCTION_NAME: getEventBySlug
+    events:
+      - http:
+          path: events/slug/{slug}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                slug: true
+
+resources:
+  Outputs:
+    SearchEventsLambdaArn:
+      Description: ARN of searchEvents Lambda function
+      Value:
+        Fn::GetAtt:
+          - SearchEventsLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-SearchEventsLambdaArn
+
+    GetCalendarEventsLambdaArn:
+      Description: ARN of getCalendarEvents Lambda function
+      Value:
+        Fn::GetAtt:
+          - GetCalendarEventsLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-GetCalendarEventsLambdaArn
+
+    GetEventBySlugLambdaArn:
+      Description: ARN of getEventBySlug Lambda function
+      Value:
+        Fn::GetAtt:
+          - GetEventBySlugLambdaFunction
+          - Arn
+      Export:
+        Name: ${self:provider.stage}-GetEventBySlugLambdaArn

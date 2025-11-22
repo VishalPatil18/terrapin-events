@@ -83,6 +83,42 @@ jobs:
           cd services/events
           serverless deploy --stage dev --verbose
 
+      - name: Install registrations service dependencies
+        id: install-registrations-deps
+        run: |
+          cd services/registrations
+          npm ci
+
+      - name: Deploy registrations service
+        id: deploy-registrations
+        run: |
+          cd services/registrations
+          serverless deploy --stage dev --verbose
+
+      - name: Install Event Discovery service dependencies
+        id: install-event-search-deps
+        run: |
+          cd services/search
+          npm ci
+
+      - name: Deploy Event Discovery service
+        id: deploy-search
+        run: |
+          cd services/search
+          serverless deploy --stage dev --verbose
+
+      - name: Install Notification service dependencies
+        id: install-notifications-deps
+        run: |
+          cd services/notifications
+          npm ci
+
+      - name: Deploy Notification service
+        id: deploy-notifications
+        run: |
+          cd services/notifications
+          serverless deploy --stage dev --verbose
+
       - name: Deploy AppSync resolvers
         id: deploy-appsync-resolvers
         run: |
